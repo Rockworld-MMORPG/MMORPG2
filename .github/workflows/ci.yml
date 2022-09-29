@@ -1,6 +1,12 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - "master"
+  pull_request:
+    branches:
+      - "master"
 
 jobs:
   build:
@@ -28,10 +34,16 @@ jobs:
       if: runner.os == 'Linux'
       run: sudo apt-get update && sudo apt-get install libxrandr-dev libxcursor-dev libudev-dev libopenal-dev libflac-dev libvorbis-dev libgl1-mesa-dev libegl1-mesa-dev libdrm-dev libgbm-dev
 
+    - name: Cache CMake Dependencies
+      uses: actions/cache@v3
+      with:
+        path: ${{ github.workspace }}/build/_deps
+        key: ${{ runner.os }}-deps
+
     - name: Configure CMake
       shell: bash
-      run: cmake -S $GITHUB_WORKSPACE -B $GITHUB_WORKSPACE/build
+      run: cmake -S ${{ github.workspace }} -B ${{ github.workspace }}/build
 
     - name: Build
       shell: bash
-      run: cmake --build $GITHUB_WORKSPACE/build --config DebugStrict --target all
+      run: cmake --build ${{ github.workspace }}/build --config DebugStrict
