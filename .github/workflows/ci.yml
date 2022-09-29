@@ -4,8 +4,22 @@ on: [push, pull_request]
 
 jobs:
   build:
-    name: ${{ matrix.platform.name }} ${{ matrix.config.name }} ${{ matrix.type.name }}
+    name: ${{ matrix.platform.name }}
     runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - {
+            name: "Windows (MSVC)",
+            os: windows-latest,
+          }
+          - {
+            name: "Ubuntu (GCC)",
+            os: ubuntu-latest,
+          }
+
+
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -16,7 +30,7 @@ jobs:
 
     - name: Configure CMake
       shell: bash
-      run: cmake -S $GITHUB_WORKSPACE -B $GITHUB_WORKSPACE/build -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/install ${{matrix.platform.flags}} ${{matrix.config.flags}} ${{matrix.type.flags}}
+      run: cmake -S $GITHUB_WORKSPACE -B $GITHUB_WORKSPACE/build
 
     - name: Build
       shell: bash
