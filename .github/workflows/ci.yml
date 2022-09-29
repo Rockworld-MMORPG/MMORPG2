@@ -1,0 +1,23 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: ${{ matrix.platform.name }} ${{ matrix.config.name }} ${{ matrix.type.name }}
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Install Dependencies
+      if: runner.os == 'Linux'
+      run: sudo apt-get update && sudo apt-get install libxrandr-dev libxcursor-dev libudev-dev libopenal-dev libflac-dev libvorbis-dev libgl1-mesa-dev libegl1-mesa-dev libdrm-dev libgbm-dev
+
+    - name: Configure CMake
+      shell: bash
+      run: cmake -S $GITHUB_WORKSPACE -B $GITHUB_WORKSPACE/build -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/install ${{matrix.platform.flags}} ${{matrix.config.flags}} ${{matrix.type.flags}}
+
+    - name: Build
+      shell: bash
+      run: cmake --build $GITHUB_WORKSPACE/build --config DebugStrict --target all
