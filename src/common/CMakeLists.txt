@@ -1,6 +1,7 @@
 add_library(common)
+add_library(MMORPG::Common ALIAS common)
 target_sources(common PRIVATE common.cpp)
-target_link_libraries(common PUBLIC SFML::Graphics)
+target_link_libraries(common PUBLIC SFML::Graphics SFML::Network SFML::Audio EnTT::EnTT)
 set_target_properties(common PROPERTIES 
     VERSION 0.1.0
     SOVERSION 0
