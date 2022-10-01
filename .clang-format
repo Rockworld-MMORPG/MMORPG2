@@ -52,7 +52,7 @@ FixNamespaceComments: true
 IncludeBlocks: Merge
 IndentCaseLabels: true
 IndentPPDirectives: AfterHash
-IndentWidth: 4
+IndentWidth: 2
 IndentWrappedFunctionNames: true
 KeepEmptyLinesAtTheStartOfBlocks: false
 MaxEmptyLinesToKeep: 2
@@ -84,8 +84,8 @@ SpacesInCStyleCastParentheses: false
 SpacesInContainerLiterals: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-Standard: c++11
-TabWidth: 4
+Standard: c++20
+TabWidth: 2
 UseTab: ForIndentation
 
 ...
