@@ -1,7 +1,8 @@
 #pragma once
 
-namespace common {
+namespace Common
+{
 
-    auto test() -> void;
+	auto test() -> void;
 
 }

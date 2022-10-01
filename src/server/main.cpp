@@ -17,19 +17,19 @@ struct Player
 
 auto main() -> int
 {
+	// Maps clients to entity IDs
 	std::unordered_map<std::uint32_t, Player> players;
 
-	sf::Clock clock;
-	clock.restart();
-
-	sf::UdpSocket socket;
-	auto status = socket.bind(common::SERVER_PORT);
+	sf::UdpSocket udpSocket;
+	auto status = udpSocket.bind(Common::SERVER_PORT);
 	if (status != sf::Socket::Status::Done)
 	{
 		return 1;
 	}
-	socket.setBlocking(false);
+	udpSocket.setBlocking(false);
 
+	sf::Clock clock;
+	clock.restart();
 	bool shouldExit = false;
 
 	while (!shouldExit)
@@ -41,7 +41,7 @@ auto main() -> int
 		std::uint16_t remotePort = 0;
 
 		sf::Socket::Status status = sf::Socket::Status::NotReady;
-		while ((status = socket.receive(packet, remoteAddress, remotePort)) == sf::Socket::Status::Partial)
+		while ((status = udpSocket.receive(packet, remoteAddress, remotePort)) == sf::Socket::Status::Partial)
 		{
 		}
 
@@ -49,7 +49,7 @@ auto main() -> int
 		{
 			uint32_t messageType{};
 			packet >> messageType;
-			if (messageType == common::Message::Terminate)
+			if (messageType == Common::Message::Terminate)
 			{
 				shouldExit = true;
 				break;
@@ -73,10 +73,10 @@ auto main() -> int
 			std::cout << "Pos is " << pos.x << ", " << pos.y << "\n";
 
 			packet.clear();
-			packet << common::Message::Position << pos.x << pos.y;
+			packet << Common::Message::Position << pos.x << pos.y;
 			do
 			{
-				status = socket.send(packet, remoteAddress.value(), common::CLIENT_PORT);
+				status = udpSocket.send(packet, remoteAddress.value(), Common::CLIENT_PORT);
 			} while (status == sf::Socket::Status::Partial);
 		}
 		else

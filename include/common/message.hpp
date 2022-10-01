@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace common
+namespace Common
 {
 
 	enum Message : std::uint32_t
@@ -12,4 +12,4 @@ namespace common
 		Terminate
 	};
 
-} // namespace common
+} // namespace Common
