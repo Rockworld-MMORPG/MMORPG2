@@ -1,91 +1,119 @@
-#include "SFML/Network/IpAddress.hpp"
-#include "SFML/Network/Socket.hpp"
-#include "SFML/System/Sleep.hpp"
-#include "SFML/System/Time.hpp"
+#include "NetworkManager.hpp"
+#include "SFML/Window/WindowStyle.hpp"
 #include "common/message.hpp"
-#include <SFML/Network.hpp>
-#include <common/server_properties.hpp>
+#include <SFML/System/Clock.hpp>
+#include <SFML/System/Vector2.hpp>
 #include <iostream>
 #include <unordered_map>
-
-const std::int32_t MIN_SERVER_TICK_TIME = 20;
 
 struct Player
 {
 	sf::Vector2f position{0.0F, 0.0F};
 };
 
+using PlayerMap = std::unordered_map<Server::ClientID, Player>;
+
+auto parseTCPMessages(Server::NetworkManager& networkManager, PlayerMap& playerMap, bool& shouldExit) -> void
+{
+	std::optional<Server::Message> message;
+	while ((message = networkManager.getNextTCPMessage()).has_value())
+	{
+		auto messageType = Common::Message::None;
+		message->data >> messageType;
+
+		switch (messageType)
+		{
+			case Common::Message::Connect:
+			{
+				std::uint16_t udpPort = 0;
+				message->data >> udpPort;
+
+				networkManager.setClientUdpPort(message->clientID, udpPort);
+
+				if (!playerMap.contains(message->clientID))
+				{
+					playerMap.emplace(message->clientID, Player());
+					Server::Message outboundMessage{};
+					outboundMessage.clientID = message->clientID;
+					outboundMessage.data << static_cast<std::uint32_t>(Common::Message::Position) << 0.0F << 0.0F;
+					networkManager.pushUDPMessage(std::move(outboundMessage));
+				}
+			}
+			break;
+			case Common::Message::Disconnect:
+			{
+				std::cout << "Received disconnect from client " << message->clientID << "\n";
+				auto iterator = playerMap.find(message->clientID);
+				if (iterator != playerMap.end())
+				{
+					playerMap.erase(iterator);
+				}
+				networkManager.closeConnection(message->clientID);
+			}
+			break;
+			case Common::Message::Terminate:
+			{
+				shouldExit = true;
+			}
+			default:
+				break;
+		}
+	}
+}
+
+auto parseUDPMessages(Server::NetworkManager& networkManager, PlayerMap& playerMap, const float deltaTime) -> void
+{
+	std::optional<Server::Message> message;
+	while ((message = networkManager.getNextUDPMessage()).has_value())
+	{
+		auto messageType = Common::Message::None;
+		message->data >> messageType;
+
+		switch (messageType)
+		{
+			case Common::Message::Movement:
+			{
+				sf::Vector2f movementDelta{0.0F, 0.0F};
+				message->data >> movementDelta.x >> movementDelta.y;
+
+				auto iterator = playerMap.find(message->clientID);
+				if (iterator == playerMap.end())
+				{
+					playerMap.emplace(message->clientID, Player());
+				}
+				auto&& position = playerMap[message->clientID].position;
+				position += movementDelta * deltaTime;
+
+				Server::Message outboundMessage{};
+				outboundMessage.clientID = message->clientID;
+				outboundMessage.data << static_cast<std::uint32_t>(Common::Message::Position) << position.x << position.y;
+				networkManager.pushUDPMessage(std::move(outboundMessage));
+			}
+			break;
+			default:
+				break;
+		}
+	}
+}
+
 auto main() -> int
 {
-	// Maps clients to entity IDs
-	std::unordered_map<std::uint32_t, Player> players;
+	Server::NetworkManager networkManager;
+	PlayerMap playerMap;
 
-	sf::UdpSocket udpSocket;
-	auto status = udpSocket.bind(Common::SERVER_PORT);
-	if (status != sf::Socket::Status::Done)
-	{
-		return 1;
-	}
-	udpSocket.setBlocking(false);
-
+	// Begin main loop
 	sf::Clock clock;
 	clock.restart();
 	bool shouldExit = false;
 
 	while (!shouldExit)
 	{
-		auto deltaTime = clock.restart().asSeconds();
+		float deltaTime = clock.restart().asSeconds();
+		networkManager.update();
 
-		sf::Packet packet{};
-		std::optional<sf::IpAddress> remoteAddress{};
-		std::uint16_t remotePort = 0;
-
-		sf::Socket::Status status = sf::Socket::Status::NotReady;
-		while ((status = udpSocket.receive(packet, remoteAddress, remotePort)) == sf::Socket::Status::Partial)
-		{
-		}
-
-		if (status == sf::Socket::Status::Done)
-		{
-			uint32_t messageType{};
-			packet >> messageType;
-			if (messageType == Common::Message::Terminate)
-			{
-				shouldExit = true;
-				break;
-			}
-
-			if (!players.contains(remoteAddress->toInteger()))
-			{
-				players.emplace(remoteAddress->toInteger(), Player{});
-			}
-
-			sf::Vector2f delta{0.0F, 0.0F};
-			packet >> delta.x;
-			packet >> delta.y;
-
-			std::cout << "Got " << delta.x << ", " << delta.y << "\n";
-
-			delta *= deltaTime * 200.0F;
-			auto&& pos = players.at(remoteAddress->toInteger()).position;
-			pos += delta;
-
-			std::cout << "Pos is " << pos.x << ", " << pos.y << "\n";
-
-			packet.clear();
-			packet << Common::Message::Position << pos.x << pos.y;
-			do
-			{
-				status = udpSocket.send(packet, remoteAddress.value(), Common::CLIENT_PORT);
-			} while (status == sf::Socket::Status::Partial);
-		}
-		else
-		{
-			sf::sleep(sf::milliseconds(MIN_SERVER_TICK_TIME));
-		}
+		parseTCPMessages(networkManager, playerMap, shouldExit);
+		parseUDPMessages(networkManager, playerMap, deltaTime);
 	}
 
-
-	std::cout << "Hello from server" << std::endl;
 	return 0;
 }

@@ -47,11 +47,11 @@ auto getPlayerInput() -> sf::Vector2f
 auto sendPlayerMovement(sf::UdpSocket& socket, const sf::Vector2f& movement) -> void
 {
 	sf::Packet packet{};
-	packet << Common::Message::Movement << movement.x << movement.y;
+	packet << static_cast<std::uint32_t>(Common::Message::Movement) << movement.x << movement.y;
 	sf::Socket::Status status = sf::Socket::Status::NotReady;
 	do
 	{
-		status = socket.send(packet, SERVER_ADDRESS, Common::SERVER_PORT);
+		status = socket.send(packet, SERVER_ADDRESS, Common::UDP_PORT);
 	} while (status == sf::Socket::Status::Partial);
 }
 
@@ -69,12 +69,70 @@ auto receivePlayerPosition(sf::UdpSocket& socket) -> std::optional<sf::Vector2f>
 	if (status == sf::Socket::Status::Done)
 	{
 		sf::Vector2f playerPosition{0.0F, 0.0F};
-		std::uint32_t type = Common::Message::Terminate;
+		auto type = Common::Message::None;
 		packet >> type >> playerPosition.x >> playerPosition.y;
 		return playerPosition;
 	}
 
 	return std::optional<sf::Vector2f>{};
+}
+
+auto connectToServer(sf::TcpSocket& tcpSocket, std::uint16_t localPort) -> void
+{
+	std::cout << "Connecting to server\n";
+	auto status = sf::Socket::Status::NotReady;
+
+	status = tcpSocket.connect(Common::SERVER_ADDRESS, Common::TCP_PORT);
+	if (status != sf::Socket::Status::Done)
+	{
+		std::cout << "Failed to connect\n";
+		std::cout << "Error " << static_cast<std::uint32_t>(status) << "\n";
+	}
+	else
+	{
+		std::cout << "Connection successful\n";
+	}
+
+	sf::Packet packet{};
+	packet << static_cast<std::uint32_t>(Common::Message::Connect) << localPort;
+	status = tcpSocket.send(packet);
+
+	if (status != sf::Socket::Status::Done)
+	{
+		std::cout << "Failed to send connection message\n";
+	}
+	else
+	{
+		std::cout << "Connected to server and requested UDP port " << localPort << "\n";
+	}
+}
+
+auto disconnectFromServer(sf::TcpSocket& tcpSocket) -> void
+{
+	std::cout << "Disconnecting from server\n";
+
+	sf::Packet packet{};
+	packet << static_cast<std::uint32_t>(Common::Message::Disconnect);
+	auto status = sf::Socket::Status::NotReady;
+
+	do
+	{
+		status = tcpSocket.send(packet);
+	} while (status == sf::Socket::Status::Partial);
+
+	if (status != sf::Socket::Status::Done)
+	{
+		std::cout << "Failed to send disconnect message\n";
+	}
+	else
+	{
+		std::cout << "Disconnected successfully\n";
+	}
+
+	while (tcpSocket.receive(packet) != sf::Socket::Status::Disconnected)
+	{
+		std::cout << "Awaiting disconnect from server\n";
+	}
 }
 
 auto main(int /* argc */, char** argv) -> int
@@ -86,14 +144,22 @@ auto main(int /* argc */, char** argv) -> int
 	bool windowShouldClose = false;
 	sf::RenderWindow renderWindow;
 	renderWindow.create(sf::VideoMode{sf::Vector2u{WINDOW_WIDTH, WINDOW_HEIGHT}, BIT_DEPTH}, "Client");
+	renderWindow.setVerticalSyncEnabled(true);
 
 	sf::UdpSocket udpSocket;
-	auto status = udpSocket.bind(Common::CLIENT_PORT);
+	auto status = udpSocket.bind(sf::Socket::AnyPort);
 	if (status != sf::Socket::Status::Done)
 	{
-		return 2;
+		std::cout << "Failed to bind UDP socket\n";
+		return 1;
 	}
 	udpSocket.setBlocking(false);
+	std::uint16_t localPort = udpSocket.getLocalPort();
+	std::cout << "UDP bound to port " << localPort << "\n";
+
+	sf::TcpSocket tcpSocket;
+	tcpSocket.setBlocking(true);
+	connectToServer(tcpSocket, localPort);
 
 	sf::Clock clock;
 	clock.restart();
@@ -101,7 +167,7 @@ auto main(int /* argc */, char** argv) -> int
 	sf::Texture playerTexture;
 	if (!playerTexture.loadFromFile("assets/player.png"))
 	{
-		return 1;
+		return 2;
 	}
 
 	sprites.emplace_back(sf::Sprite{});
@@ -154,6 +220,8 @@ auto main(int /* argc */, char** argv) -> int
 		}
 		renderWindow.display();
 	}
+
+	disconnectFromServer(tcpSocket);
 
 	return 0;
 }
