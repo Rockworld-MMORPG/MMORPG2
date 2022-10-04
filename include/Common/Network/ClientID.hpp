@@ -10,6 +10,7 @@ namespace Common::Network
 	struct ClientID
 	{
 	public:
+		ClientID();
 		explicit ClientID(ClientID_t clientID);
 		[[nodiscard]] auto get() const -> ClientID_t;
 

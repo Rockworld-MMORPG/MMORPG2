@@ -28,7 +28,7 @@ auto parseTCPMessages(bool& shouldExit) -> void
 			break;
 			case Common::Network::MessageType::Disconnect:
 			{
-				g_networkManager.closeConnection(message.clientID);
+				g_networkManager.markForDisconnect(message.clientID);
 			}
 			break;
 			case Common::Network::MessageType::Terminate:

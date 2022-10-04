@@ -5,11 +5,10 @@
 #include "Message.hpp"
 #include "SFML/Network/IpAddress.hpp"
 #include "SFML/Network/Packet.hpp"
+#include "SFML/Network/Socket.hpp"
 #include <functional>
 #include <spdlog/spdlog.h>
 #include <unistd.h>
-
-const sf::Time MAX_SELECTOR_WAIT_TIME = sf::milliseconds(10);
 
 namespace Server
 {
@@ -28,33 +27,40 @@ namespace Server
 
 	auto NetworkManager::shutdown() -> void
 	{
+		for (const auto& [identifier, client] : m_clientList)
+		{
+			markForDisconnect(identifier);
+		}
+		disconnectClients();
+
 		m_socketSelector.clear();
 		m_udpSocket.unbind();
 		m_tcpListener.close();
 	}
 
-	auto NetworkManager::getNextTCPMessage() -> std::optional<Server::Message>
+	auto NetworkManager::getNextTCPMessage() -> std::optional<Message>
 	{
 		return m_tcpQueue.getInbound();
 	}
 
-	auto NetworkManager::getNextUDPMessage() -> std::optional<Server::Message>
+	auto NetworkManager::getNextUDPMessage() -> std::optional<Message>
 	{
 		return m_udpQueue.getInbound();
 	}
 
-	auto NetworkManager::pushTCPMessage(Server::Message&& message) -> void
+	auto NetworkManager::pushTCPMessage(Message&& message) -> void
 	{
-		m_tcpQueue.pushOutbound(std::forward<Server::Message>(message));
+		m_tcpQueue.pushOutbound(std::forward<Message>(message));
 	}
 
-	auto NetworkManager::pushUDPMessage(Server::Message&& message) -> void
+	auto NetworkManager::pushUDPMessage(Message&& message) -> void
 	{
-		m_udpQueue.pushOutbound(std::forward<Server::Message>(message));
+		m_udpQueue.pushOutbound(std::forward<Message>(message));
 	}
 
 	auto NetworkManager::update() -> void
 	{
+		const auto MAX_SELECTOR_WAIT_TIME = sf::milliseconds(10);
 		// Wait until a socket is ready to receive something
 		while (m_socketSelector.wait(MAX_SELECTOR_WAIT_TIME))
 		{
@@ -111,27 +117,45 @@ namespace Server
 		spdlog::debug("Set client {} UDP port to {}", clientID.get(), udpPort);
 
 		// Send the client back their client ID
-		Server::Message message{clientID, Message::Protocol::UDP};
+		Message message{clientID, Message::Protocol::UDP};
 		message.packet << Common::Network::MessageType::Connect << clientID;
 		pushTCPMessage(std::move(message));
 	}
 
+	auto NetworkManager::markForDisconnect(Common::Network::ClientID clientID) -> void
+	{
+		m_clientsPendingDisconnection.emplace_back(clientID);
+	}
+
 	auto NetworkManager::acceptNewConnection() -> void
 	{
-		// Add the client to the entity manager
-		auto clientID        = g_entityManager.create();
-		auto [pair, success] = m_clientList.emplace(clientID, Client());
+		auto tcpSocket = std::make_unique<sf::TcpSocket>();
 
 		// Initialise the client sockets
-		auto&& client    = pair->second;
-		client.tcpSocket = std::make_unique<sf::TcpSocket>();
-		auto status      = m_tcpListener.accept(*client.tcpSocket);
-		client.tcpSocket->setBlocking(false);
-		m_socketSelector.add(*client.tcpSocket);
+		auto status = m_tcpListener.accept(*tcpSocket);
+		switch (status)
+		{
+			case sf::Socket::Status::Done:
+			{
+				// Add the client to the entity manager
+				auto clientID        = g_entityManager.create();
+				auto [pair, success] = m_clientList.emplace(clientID, Client());
 
-		auto clientAddress = client.tcpSocket->getRemoteAddress().value();
-		m_clientIPMap.emplace(clientAddress.toInteger(), clientID);
-		spdlog::debug("Accepted a new connection from {} as client {}", clientAddress.toString(), clientID);
+				// Add the client's TCP socket to the selector
+				auto&& client    = pair->second;
+				client.tcpSocket = std::move(tcpSocket);
+				m_socketSelector.add(*client.tcpSocket);
+
+				// Success
+				auto clientAddress = client.tcpSocket->getRemoteAddress().value();
+				m_clientIPMap.emplace(clientAddress.toInteger(), clientID);
+				spdlog::debug("Accepted a new connection from {} as client {}", clientAddress.toString(), clientID);
+			}
+			break;
+			default:
+				spdlog::warn("TCP listener failed to accept a connection");
+				return;
+		}
 	}
 
 	auto NetworkManager::closeConnection(Common::Network::ClientID clientID) -> void
@@ -146,6 +170,7 @@ namespace Server
 		// Disconnect the client
 		auto&& client = iterator->second;
 		m_socketSelector.remove(*client.tcpSocket);
+		m_clientIPMap.erase(client.tcpSocket->getRemoteAddress()->toInteger());
 		client.tcpSocket->disconnect();
 		m_clientList.erase(iterator);
 		spdlog::debug("Connection closed successfully");
@@ -160,11 +185,12 @@ namespace Server
 		{
 			closeConnection(clientID);
 		}
+		m_clientsPendingDisconnection.clear();
 	}
 
 	auto NetworkManager::sendUDP() -> void
 	{
-		std::optional<Server::Message> message;
+		std::optional<Message> message;
 		while ((message = m_udpQueue.getOutbound()).has_value())
 		{
 			sf::Packet packet;
@@ -202,14 +228,14 @@ namespace Server
 			return;
 		}
 
-		Server::Message message{clientID.value(), Server::Message::Protocol::UDP};
+		Message message{clientID.value(), Message::Protocol::UDP};
 		std::swap(message.packet, packet);
 		m_udpQueue.pushInbound(std::move(message));
 	}
 
 	auto NetworkManager::sendTCP() -> void
 	{
-		std::optional<Server::Message> message;
+		std::optional<Message> message;
 		while ((message = m_tcpQueue.getOutbound()).has_value())
 		{
 			auto clientID = message->clientID;
@@ -221,7 +247,7 @@ namespace Server
 					// Success
 					break;
 				case sf::Socket::Status::Disconnected:
-					closeConnection(clientID);
+					markForDisconnect(clientID);
 					break;
 				default:
 					spdlog::warn("Dropped packet");
@@ -237,7 +263,7 @@ namespace Server
 		{
 			case sf::Socket::Status::Done:
 			{
-				Server::Message message{clientID, Message::Protocol::TCP};
+				Message message{clientID, Message::Protocol::TCP};
 				std::swap(message.packet, packet);
 				m_tcpQueue.pushInbound(std::move(message));
 			}

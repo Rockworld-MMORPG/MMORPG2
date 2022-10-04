@@ -1,7 +1,7 @@
 add_executable(client)
 add_executable(MMORPG::Client ALIAS client)
 
-target_sources(client PRIVATE Main.cpp Version.cpp)
+target_sources(client PRIVATE Main.cpp Version.cpp NetworkManager.cpp)
 target_include_directories(
   client
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}

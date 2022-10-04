@@ -2,7 +2,8 @@
 
 #include "Client.hpp"
 #include "Common/Network/ClientID.hpp"
-#include "MessageQueue.hpp"
+#include "Common/Network/MessageQueue.hpp"
+#include "Message.hpp"
 #include "SFML/Network/IpAddress.hpp"
 #include "SFML/Network/SocketSelector.hpp"
 #include "SFML/Network/TcpListener.hpp"
@@ -21,19 +22,20 @@ namespace Server
 
 		auto update() -> void;
 
-		auto getNextUDPMessage() -> std::optional<Server::Message>;
-		auto getNextTCPMessage() -> std::optional<Server::Message>;
+		auto getNextUDPMessage() -> std::optional<Message>;
+		auto getNextTCPMessage() -> std::optional<Message>;
 
-		auto pushUDPMessage(Server::Message&& message) -> void;
-		auto pushTCPMessage(Server::Message&& message) -> void;
+		auto pushUDPMessage(Message&& message) -> void;
+		auto pushTCPMessage(Message&& message) -> void;
 
 		auto resolveClientID(sf::IpAddress ipAddress) -> std::optional<Common::Network::ClientID>;
 		auto setClientUdpPort(Common::Network::ClientID clientID, std::uint16_t udpPort) -> void;
-		auto closeConnection(Common::Network::ClientID clientID) -> void;
+		auto markForDisconnect(Common::Network::ClientID clientID) -> void;
 
 	private:
 		auto generateClientID() -> Common::Network::ClientID;
 		auto acceptNewConnection() -> void;
+		auto closeConnection(Common::Network::ClientID clientID) -> void;
 		auto disconnectClients() -> void;
 
 		auto sendUDP() -> void;
@@ -52,8 +54,8 @@ namespace Server
 
 		Common::Network::ClientID_t m_nextClientID;
 
-		MessageQueue m_tcpQueue;
-		MessageQueue m_udpQueue;
+		Common::Network::MessageQueue<Message> m_tcpQueue;
+		Common::Network::MessageQueue<Message> m_udpQueue;
 	};
 
 	extern NetworkManager g_networkManager;

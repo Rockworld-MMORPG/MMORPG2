@@ -46,6 +46,9 @@ set(CMAKE_MODULE_LINKER_FLAGS_DEBUGSTRICT
     "${CMAKE_MODULE_LINKER_FLAGS_DEBUG}"
     CACHE STRING "")
 
+# Use mold to link because it's far faster
+add_link_options(-fuse-ld=mold)
+
 # External dependencies
 add_subdirectory(external)
 
