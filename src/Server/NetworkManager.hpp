@@ -1,12 +1,12 @@
 #pragma once
 
 #include "Client.hpp"
+#include "Common/Network/ClientID.hpp"
 #include "MessageQueue.hpp"
 #include "SFML/Network/IpAddress.hpp"
 #include "SFML/Network/SocketSelector.hpp"
 #include "SFML/Network/TcpListener.hpp"
 #include "SFML/Network/UdpSocket.hpp"
-#include "common/Network/ClientID.hpp"
 #include <list>
 #include <unordered_map>
 

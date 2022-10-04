@@ -1,7 +1,7 @@
 #pragma once
 
+#include "Common/Network/ClientID.hpp"
 #include "SFML/Network/Packet.hpp"
-#include "common/Network/ClientID.hpp"
 namespace Server
 {
 

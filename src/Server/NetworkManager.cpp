@@ -1,11 +1,10 @@
 #include "NetworkManager.hpp"
+#include "Common/Network/MessageType.hpp"
+#include "Common/Network/ServerProperties.hpp"
 #include "EntityManager.hpp"
 #include "Message.hpp"
 #include "SFML/Network/IpAddress.hpp"
 #include "SFML/Network/Packet.hpp"
-#include "common/Network/ClientID.hpp"
-#include "common/Network/MessageType.hpp"
-#include "common/Network/ServerProperties.hpp"
 #include <functional>
 #include <spdlog/spdlog.h>
 #include <unistd.h>

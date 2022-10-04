@@ -1,7 +1,7 @@
+#include "Common/Network/MessageType.hpp"
 #include "EntityManager.hpp"
 #include "NetworkManager.hpp"
 #include "Version.hpp"
-#include "common/Network/MessageType.hpp"
 #include <SFML/System/Clock.hpp>
 #include <spdlog/cfg/env.h>
 #include <spdlog/spdlog.h>

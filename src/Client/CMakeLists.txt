@@ -2,6 +2,11 @@ add_executable(client)
 add_executable(MMORPG::Client ALIAS client)
 
 target_sources(client PRIVATE Main.cpp Version.cpp)
+target_include_directories(
+  client
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+  PUBLIC ${mmorpg_SOURCE_DIR}/include)
+
 target_link_libraries(client PRIVATE common)
 target_compile_features(client PRIVATE cxx_std_20)
 
@@ -16,4 +21,4 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Version.cpp.in ${CMAKE_CURRENT_SOURCE
 add_custom_command(
   TARGET client
   POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${mmorpg_SOURCE_DIR}/assets/client $<TARGET_FILE_DIR:client>/assets)
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${mmorpg_SOURCE_DIR}/assets/Client $<TARGET_FILE_DIR:client>/assets)

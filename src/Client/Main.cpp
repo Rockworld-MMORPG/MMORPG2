@@ -1,7 +1,7 @@
+#include "Common/Network/ClientID.hpp"
+#include "Common/Network/MessageType.hpp"
+#include "Common/Network/ServerProperties.hpp"
 #include "Version.hpp"
-#include "common/Network/ClientID.hpp"
-#include "common/Network/MessageType.hpp"
-#include "common/Network/ServerProperties.hpp"
 #include <SFML/Graphics.hpp>
 #include <SFML/Network.hpp>
 #include <filesystem>
@@ -214,7 +214,6 @@ auto main(int /* argc */, char** argv) -> int
 		}
 
 		auto playerMovement = getPlayerInput();
-
 
 		// Render all sprites
 		renderWindow.clear();

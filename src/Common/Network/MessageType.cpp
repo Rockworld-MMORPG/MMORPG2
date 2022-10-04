@@ -1,4 +1,4 @@
-#include "common/Network/MessageType.hpp"
+#include "Common/Network/MessageType.hpp"
 #include <SFML/Network/Packet.hpp>
 
 namespace Common::Network

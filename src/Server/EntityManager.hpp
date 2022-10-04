@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/Network/ClientID.hpp"
+#include "Common/Network/ClientID.hpp"
 #include "entt/entt.hpp"
 
 namespace Server

@@ -2,7 +2,10 @@ add_executable(server)
 add_executable(MMORPG::Server ALIAS server)
 
 target_sources(server PRIVATE Main.cpp EntityManager.cpp NetworkManager.cpp MessageQueue.cpp Version.cpp Message.cpp)
-target_include_directories(server PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(
+  server
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+  PUBLIC ${mmorpg_SOURCE_DIR}/include)
 
 set(SERVER_VERSION_MAJOR 0)
 set(SERVER_VERSION_MINOR 1)
