@@ -1,0 +1,21 @@
+#include "Version.hpp"
+
+namespace Client::Version
+{
+
+	auto getMajor() -> std::uint32_t
+	{
+		return ${CLIENT_VERSION_MAJOR} + 0;
+	}
+
+	auto getMinor() -> std::uint32_t
+	{
+		return ${CLIENT_VERSION_MINOR} + 0;
+	}
+
+	auto getPatch() -> std::uint32_t
+	{
+		return ${CLIENT_VERSION_PATCH} + 0;
+	}
+
+} // namespace Client::Version

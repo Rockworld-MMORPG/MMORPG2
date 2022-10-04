@@ -1,24 +1,16 @@
-#include "SFML/Network/IpAddress.hpp"
-#include "SFML/Network/Socket.hpp"
-#include "SFML/Network/UdpSocket.hpp"
-#include "SFML/System/Vector2.hpp"
-#include "SFML/Window/Keyboard.hpp"
-#include "common/common.hpp"
-#include "common/message.hpp"
-#include "common/server_properties.hpp"
+#include "Version.hpp"
+#include "common/Network/ClientID.hpp"
+#include "common/Network/MessageType.hpp"
+#include "common/Network/ServerProperties.hpp"
 #include <SFML/Graphics.hpp>
 #include <SFML/Network.hpp>
 #include <filesystem>
-#include <iostream>
+#include <spdlog/spdlog.h>
 #include <vector>
 
 const unsigned int WINDOW_WIDTH  = 1280;
 const unsigned int WINDOW_HEIGHT = 720;
 const unsigned int BIT_DEPTH     = 32;
-
-const float PLAYER_MOVE_SPEED = 100.0F;
-
-const sf::IpAddress SERVER_ADDRESS{127, 0, 0, 1};
 
 auto getPlayerInput() -> sf::Vector2f
 {
@@ -44,75 +36,85 @@ auto getPlayerInput() -> sf::Vector2f
 	return playerDelta;
 }
 
-auto sendPlayerMovement(sf::UdpSocket& socket, const sf::Vector2f& movement) -> void
+auto sendPlayerMovement(sf::UdpSocket& socket, sf::Vector2f position) -> void
 {
-	sf::Packet packet{};
-	packet << static_cast<std::uint32_t>(Common::Message::Movement) << movement.x << movement.y;
-	sf::Socket::Status status = sf::Socket::Status::NotReady;
-	do
-	{
-		status = socket.send(packet, SERVER_ADDRESS, Common::UDP_PORT);
-	} while (status == sf::Socket::Status::Partial);
 }
 
 auto receivePlayerPosition(sf::UdpSocket& socket) -> std::optional<sf::Vector2f>
 {
-	sf::Packet packet{};
-	std::optional<sf::IpAddress> remoteAddress{};
-	std::uint16_t remotePort  = 0;
-	sf::Socket::Status status = sf::Socket::Status::NotReady;
-	do
-	{
-		status = socket.receive(packet, remoteAddress, remotePort);
-	} while (status == sf::Socket::Status::Partial);
-
-	if (status == sf::Socket::Status::Done)
-	{
-		sf::Vector2f playerPosition{0.0F, 0.0F};
-		auto type = Common::Message::None;
-		packet >> type >> playerPosition.x >> playerPosition.y;
-		return playerPosition;
-	}
-
-	return std::optional<sf::Vector2f>{};
+	return {{0.0F, 0.0F}};
 }
 
-auto connectToServer(sf::TcpSocket& tcpSocket, std::uint16_t localPort) -> void
+auto terminateServer(sf::TcpSocket& tcpSocket)
 {
-	std::cout << "Connecting to server\n";
+	sf::Packet packet{};
+	packet << Common::Network::MessageType::Terminate;
+
+	auto status = tcpSocket.send(packet);
+	if (status != sf::Socket::Status::Done && status != sf::Socket::Status::Disconnected)
+	{
+		spdlog::warn("Failed to send server terminate command (error code {})", static_cast<std::uint32_t>(status));
+	}
+}
+
+auto connectToServer(sf::TcpSocket& tcpSocket, std::uint16_t localPort) -> Common::Network::ClientID
+{
+	spdlog::debug("Connecting to server");
 	auto status = sf::Socket::Status::NotReady;
 
-	status = tcpSocket.connect(Common::SERVER_ADDRESS, Common::TCP_PORT);
+	status = tcpSocket.connect(Common::Network::SERVER_ADDRESS, Common::Network::TCP_PORT);
 	if (status != sf::Socket::Status::Done)
 	{
-		std::cout << "Failed to connect\n";
-		std::cout << "Error " << static_cast<std::uint32_t>(status) << "\n";
+		spdlog::warn("Failed to connect to the server (error code {})", static_cast<std::uint32_t>(status));
 	}
 	else
 	{
-		std::cout << "Connection successful\n";
+		spdlog::debug("Connected to server successfully");
 	}
 
 	sf::Packet packet{};
-	packet << static_cast<std::uint32_t>(Common::Message::Connect) << localPort;
+	packet << Common::Network::MessageType::Connect << localPort;
 	status = tcpSocket.send(packet);
 
 	if (status != sf::Socket::Status::Done)
 	{
-		std::cout << "Failed to send connection message\n";
+		spdlog::warn("Failed to send connection message (error code {})", static_cast<std::uint32_t>(status));
 	}
 	else
 	{
-		std::cout << "Connected to server and requested UDP port " << localPort << "\n";
+		spdlog::debug("Sent connection message requesting UDP port {}", localPort);
 	}
+
+	packet.clear();
+
+	const std::size_t MAX_CONNECTION_ATTEMPTS = 5;
+	for (auto attemptNumber = 0; attemptNumber < MAX_CONNECTION_ATTEMPTS; ++attemptNumber)
+	{
+		status = tcpSocket.receive(packet);
+		if (status == sf::Socket::Status::Done)
+		{
+			Common::Network::MessageType messageType = Common::Network::MessageType::None;
+			packet >> messageType;
+			if (messageType == Common::Network::MessageType::Connect)
+			{
+				Common::Network::ClientID_t clientID = -1;
+				packet >> clientID;
+				spdlog::debug("Port requested successfully and granted client ID {}", clientID);
+				return Common::Network::ClientID(clientID);
+			}
+		}
+	}
+
+	spdlog::warn("Failed to connect");
+	return Common::Network::ClientID(-1);
 }
 
 auto disconnectFromServer(sf::TcpSocket& tcpSocket) -> void
 {
-	std::cout << "Disconnecting from server\n";
+	spdlog::debug("Disconnecting from server");
 
 	sf::Packet packet{};
-	packet << static_cast<std::uint32_t>(Common::Message::Disconnect);
+	packet << Common::Network::MessageType::Disconnect;
 	auto status = sf::Socket::Status::NotReady;
 
 	do
@@ -122,21 +124,28 @@ auto disconnectFromServer(sf::TcpSocket& tcpSocket) -> void
 
 	if (status != sf::Socket::Status::Done)
 	{
-		std::cout << "Failed to send disconnect message\n";
+		spdlog::warn("Failed to send disconnect message (error code {})", static_cast<std::uint32_t>(status));
 	}
 	else
 	{
-		std::cout << "Disconnected successfully\n";
+		spdlog::debug("Sent disconnect message successfully");
 	}
 
 	while (tcpSocket.receive(packet) != sf::Socket::Status::Disconnected)
 	{
-		std::cout << "Awaiting disconnect from server\n";
+		spdlog::debug("Waiting for the server to disconnect the socket");
+		sf::sleep(sf::seconds(1.0F));
 	}
 }
 
 auto main(int /* argc */, char** argv) -> int
 {
+#if !defined(NDEBUG)
+	spdlog::set_level(spdlog::level::debug);
+#endif
+
+	spdlog::info("Client version {}.{}.{}", Client::Version::getMajor(), Client::Version::getMinor(), Client::Version::getPatch());
+
 	auto executablePath = std::filesystem::path(*argv);
 	std::filesystem::current_path(executablePath.parent_path());
 
@@ -150,16 +159,16 @@ auto main(int /* argc */, char** argv) -> int
 	auto status = udpSocket.bind(sf::Socket::AnyPort);
 	if (status != sf::Socket::Status::Done)
 	{
-		std::cout << "Failed to bind UDP socket\n";
+		spdlog::warn("Failed to bind UDP socket");
 		return 1;
 	}
 	udpSocket.setBlocking(false);
 	std::uint16_t localPort = udpSocket.getLocalPort();
-	std::cout << "UDP bound to port " << localPort << "\n";
+	spdlog::debug("UDP bound to port {}", localPort);
 
 	sf::TcpSocket tcpSocket;
 	tcpSocket.setBlocking(true);
-	connectToServer(tcpSocket, localPort);
+	auto clientID = connectToServer(tcpSocket, localPort);
 
 	sf::Clock clock;
 	clock.restart();
@@ -194,23 +203,18 @@ auto main(int /* argc */, char** argv) -> int
 			if (event.type == sf::Event::Closed)
 			{
 				windowShouldClose = true;
+				disconnectFromServer(tcpSocket);
 			}
+		}
+
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::P))
+		{
+			terminateServer(tcpSocket);
+			windowShouldClose = true;
 		}
 
 		auto playerMovement = getPlayerInput();
 
-		// Send player input if there is any
-		if (playerMovement.length() != 0.0F)
-		{
-			sendPlayerMovement(udpSocket, playerMovement);
-		}
-
-		// Receive the player position from the server
-		auto playerPosition = receivePlayerPosition(udpSocket);
-		if (playerPosition.has_value())
-		{
-			player.setPosition(playerPosition.value());
-		}
 
 		// Render all sprites
 		renderWindow.clear();
@@ -220,8 +224,6 @@ auto main(int /* argc */, char** argv) -> int
 		}
 		renderWindow.display();
 	}
-
-	disconnectFromServer(tcpSocket);
 
 	return 0;
 }

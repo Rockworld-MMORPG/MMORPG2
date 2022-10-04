@@ -1,9 +1,8 @@
-FetchContent_Declare(
-    sfml
-    GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG master
-    GIT_SHALLOW TRUE
-    GIT_PROGRESS TRUE
-)
+fetchcontent_declare(
+  sfml
+  GIT_REPOSITORY https://github.com/SFML/SFML.git
+  GIT_TAG master
+  GIT_SHALLOW TRUE
+  GIT_PROGRESS TRUE)
 
-FetchContent_MakeAvailable(sfml)
+fetchcontent_makeavailable(sfml)

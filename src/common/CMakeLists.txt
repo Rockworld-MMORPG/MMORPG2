@@ -1,7 +1,11 @@
 add_library(common)
 add_library(MMORPG::Common ALIAS common)
 
-target_sources(common PRIVATE common.cpp)
+target_sources(common PRIVATE common.cpp Network/MessageType.cpp Network/ClientID.cpp)
+target_include_directories(
+  common
+  PRIVATE ${CMAKE_CURRENT_LIST_DIR}
+  PUBLIC ${mmorpg_SOURCE_DIR}/include/common)
 
 target_link_libraries(common PUBLIC SFML::Graphics SFML::Network SFML::Audio EnTT::EnTT spdlog::spdlog)
 
