@@ -135,11 +135,12 @@ auto main(int /* argc */, char** argv) -> int
 
 	spdlog::info("Client version {}.{}.{}", Version::getMajor(), Version::getMinor(), Version::getPatch());
 
-	auto executablePath = std::filesystem::path(*argv);
-	std::filesystem::current_path(executablePath.parent_path());
+	auto executablePath      = std::filesystem::path(*argv);
+	const auto executableDir = executablePath.parent_path();
+	const auto assetDir      = executableDir / "assets";
 
 	spdlog::debug("Initialising the network manager");
-	Client::g_networkManager.init();
+	g_networkManager.init();
 
 	std::unordered_map<Common::Network::ClientID, sf::Sprite, Common::Network::ClientIDHash> sprites;
 
@@ -151,7 +152,7 @@ auto main(int /* argc */, char** argv) -> int
 	clock.restart();
 
 	sf::Texture playerTexture;
-	if (!playerTexture.loadFromFile("assets/player.png"))
+	if (!playerTexture.loadFromFile(assetDir / "player.png"))
 	{
 		return 2;
 	}
