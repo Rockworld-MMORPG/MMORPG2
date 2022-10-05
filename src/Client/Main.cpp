@@ -1,7 +1,7 @@
 #include "Common/Network/ClientID.hpp"
 #include "Common/Network/MessageType.hpp"
 #include "Common/Network/ServerProperties.hpp"
-#include "NetworkManager.hpp"
+#include "Network/NetworkManager.hpp"
 #include "SFML/System/Vector2.hpp"
 #include "SFML/Window/Keyboard.hpp"
 #include "Version.hpp"
@@ -16,13 +16,15 @@ const unsigned int WINDOW_WIDTH  = 1280;
 const unsigned int WINDOW_HEIGHT = 720;
 const unsigned int BIT_DEPTH     = 32;
 
+using namespace Client;
+
 auto sendPlayerInput() -> sf::Vector2f
 {
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::P))
 	{
 		sf::Packet packet;
 		packet << Common::Network::MessageType::Terminate;
-		Client::g_networkManager.pushTCPMessage(std::move(packet));
+		g_networkManager.pushTCPMessage(std::move(packet));
 		return {0.0F, 0.0F};
 	}
 
@@ -49,7 +51,7 @@ auto sendPlayerInput() -> sf::Vector2f
 	{
 		sf::Packet packet;
 		packet << Common::Network::MessageType::Movement << playerDelta.x << playerDelta.y;
-		Client::g_networkManager.pushUDPMessage(std::move(packet));
+		g_networkManager.pushUDPMessage(std::move(packet));
 	}
 
 	return playerDelta;
@@ -58,7 +60,7 @@ auto sendPlayerInput() -> sf::Vector2f
 auto parseUDP(std::unordered_map<Common::Network::ClientID, sf::Sprite, Common::Network::ClientIDHash>& sprites, sf::Texture& playerTexture) -> void
 {
 	std::optional<sf::Packet> optPacket;
-	while ((optPacket = Client::g_networkManager.getNextUDPMessage()).has_value())
+	while ((optPacket = g_networkManager.getNextUDPMessage()).has_value())
 	{
 		auto& packet = optPacket.value();
 
@@ -131,7 +133,7 @@ auto main(int /* argc */, char** argv) -> int
 	spdlog::set_level(spdlog::level::debug);
 #endif
 
-	spdlog::info("Client version {}.{}.{}", Client::Version::getMajor(), Client::Version::getMinor(), Client::Version::getPatch());
+	spdlog::info("Client version {}.{}.{}", Version::getMajor(), Version::getMinor(), Version::getPatch());
 
 	auto executablePath = std::filesystem::path(*argv);
 	std::filesystem::current_path(executablePath.parent_path());
@@ -154,7 +156,7 @@ auto main(int /* argc */, char** argv) -> int
 		return 2;
 	}
 
-	Client::g_networkManager.connect();
+	g_networkManager.connect();
 
 	bool windowShouldClose = false;
 	while (!windowShouldClose)
@@ -173,11 +175,11 @@ auto main(int /* argc */, char** argv) -> int
 		}
 
 
-		Client::g_networkManager.update();
+		g_networkManager.update();
 
 		auto movement = sendPlayerInput();
 		// Predict player movement
-		auto iterator = sprites.find(Client::g_networkManager.getClientID());
+		auto iterator = sprites.find(g_networkManager.getClientID());
 		if (iterator != sprites.end())
 		{
 			iterator->second.move(movement * 200.0F * deltaTime);
@@ -194,7 +196,7 @@ auto main(int /* argc */, char** argv) -> int
 		renderWindow.display();
 	}
 
-	Client::g_networkManager.shutdown();
+	g_networkManager.shutdown();
 
 	return 0;
 }
