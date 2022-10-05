@@ -2,19 +2,29 @@
 #include "Common/Network/MessageType.hpp"
 #include "Common/Network/ServerProperties.hpp"
 #include "NetworkManager.hpp"
+#include "SFML/System/Vector2.hpp"
 #include "Version.hpp"
 #include <SFML/Graphics.hpp>
 #include <SFML/Network.hpp>
 #include <filesystem>
 #include <spdlog/spdlog.h>
+#include <unordered_map>
 #include <vector>
 
 const unsigned int WINDOW_WIDTH  = 1280;
 const unsigned int WINDOW_HEIGHT = 720;
 const unsigned int BIT_DEPTH     = 32;
 
-auto getPlayerInput() -> sf::Vector2f
+auto sendPlayerInput()
 {
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::P))
+	{
+		sf::Packet packet;
+		packet << Common::Network::MessageType::Terminate;
+		Client::g_networkManager.pushTCPMessage(std::move(packet));
+		return;
+	}
+
 	sf::Vector2f playerDelta{0.0F, 0.0F};
 
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
@@ -34,9 +44,68 @@ auto getPlayerInput() -> sf::Vector2f
 		playerDelta.y += 1.0F;
 	}
 
-	return playerDelta;
+	if (playerDelta.lengthSq() > 0.0F)
+	{
+		sf::Packet packet;
+		packet << Common::Network::MessageType::Movement << playerDelta.x << playerDelta.y;
+		Client::g_networkManager.pushUDPMessage(std::move(packet));
+	}
 }
 
+auto parseUDP(std::unordered_map<Common::Network::ClientID, sf::Sprite, Common::Network::ClientIDHash>& sprites, sf::Texture& playerTexture) -> void
+{
+	std::optional<sf::Packet> optPacket;
+	while ((optPacket = Client::g_networkManager.getNextUDPMessage()).has_value())
+	{
+		auto& packet = optPacket.value();
+
+		Common::Network::MessageType messageType = Common::Network::MessageType::None;
+		packet >> messageType;
+
+		switch (messageType)
+		{
+			case Common::Network::MessageType::Position:
+			{
+				Common::Network::ClientID_t clientID = -1;
+				packet >> clientID;
+
+				auto iterator = sprites.find(Common::Network::ClientID(clientID));
+				if (iterator == sprites.end())
+				{
+					auto [pair, success] = sprites.emplace(clientID, sf::Sprite{});
+					pair->second.setTexture(playerTexture);
+					iterator = pair;
+				}
+
+				sf::Vector2f position;
+				packet >> position.x >> position.y;
+				iterator->second.setPosition(position);
+			}
+			case Common::Network::MessageType::CreateEntity:
+			{
+				Common::Network::ClientID_t clientID = -1;
+				packet >> clientID;
+				auto iterator = sprites.find(Common::Network::ClientID(clientID));
+				if (iterator == sprites.end())
+				{
+					auto [pair, success] = sprites.emplace(clientID, sf::Sprite{});
+					pair->second.setTexture(playerTexture);
+				}
+			}
+			break;
+			case Common::Network::MessageType::DestroyEntity:
+			{
+				Common::Network::ClientID_t clientID = -1;
+				packet >> clientID;
+				sprites.erase(Common::Network::ClientID(clientID));
+			}
+			break;
+			default:
+				// Do nothing
+				break;
+		}
+	}
+}
 
 auto main(int /* argc */, char** argv) -> int
 {
@@ -52,8 +121,8 @@ auto main(int /* argc */, char** argv) -> int
 	spdlog::debug("Initialising the network manager");
 	Client::g_networkManager.init();
 
-	std::vector<sf::Sprite> sprites{};
-	bool windowShouldClose = false;
+	std::unordered_map<Common::Network::ClientID, sf::Sprite, Common::Network::ClientIDHash> sprites;
+
 	sf::RenderWindow renderWindow;
 	renderWindow.create(sf::VideoMode{sf::Vector2u{WINDOW_WIDTH, WINDOW_HEIGHT}, BIT_DEPTH}, "Client");
 	renderWindow.setVerticalSyncEnabled(true);
@@ -67,13 +136,9 @@ auto main(int /* argc */, char** argv) -> int
 		return 2;
 	}
 
-	sprites.emplace_back(sf::Sprite{});
-	auto&& player = sprites.back();
-	player.setTexture(playerTexture);
-	player.setPosition(sf::Vector2f{0.0F, 0.0F});
-
 	Client::g_networkManager.connect();
 
+	bool windowShouldClose = false;
 	while (!windowShouldClose)
 	{
 		// Get the time elapsed since the previous frame
@@ -89,20 +154,15 @@ auto main(int /* argc */, char** argv) -> int
 			}
 		}
 
+
 		Client::g_networkManager.update();
 
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::P))
-		{
-			sf::Packet packet;
-			packet << Common::Network::MessageType::Terminate;
-			Client::g_networkManager.pushTCPMessage(std::move(packet));
-		}
-
-		auto playerMovement = getPlayerInput();
+		sendPlayerInput();
+		parseUDP(sprites, playerTexture);
 
 		// Render all sprites
 		renderWindow.clear();
-		for (auto& sprite : sprites)
+		for (auto& [id, sprite] : sprites)
 		{
 			renderWindow.draw(sprite);
 		}

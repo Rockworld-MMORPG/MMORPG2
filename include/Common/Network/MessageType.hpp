@@ -19,8 +19,10 @@ namespace Common::Network
 		Terminate  = 0x03,
 
 		// 0x1 - Gameplay messages
-		Movement = 0x10,
-		Position = 0x11,
+		CreateEntity  = 0x10,
+		DestroyEntity = 0x11,
+		Movement      = 0x12,
+		Position      = 0x13,
 	};
 
 	auto operator<<(sf::Packet& packet, MessageType messageType) -> sf::Packet&;

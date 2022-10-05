@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <entt/entity/entity.hpp>
 
 namespace Common::Network
 {

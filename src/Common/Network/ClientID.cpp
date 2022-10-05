@@ -5,7 +5,7 @@ namespace Common::Network
 {
 
 	ClientID::ClientID() :
-	    m_id(-1) {}
+	    m_id() {}
 
 	ClientID::ClientID(const ClientID_t clientID) :
 	    m_id(clientID)
