@@ -3,6 +3,7 @@
 #include "Common/Network/ServerProperties.hpp"
 #include "NetworkManager.hpp"
 #include "SFML/System/Vector2.hpp"
+#include "SFML/Window/Keyboard.hpp"
 #include "Version.hpp"
 #include <SFML/Graphics.hpp>
 #include <SFML/Network.hpp>
@@ -15,14 +16,14 @@ const unsigned int WINDOW_WIDTH  = 1280;
 const unsigned int WINDOW_HEIGHT = 720;
 const unsigned int BIT_DEPTH     = 32;
 
-auto sendPlayerInput()
+auto sendPlayerInput() -> sf::Vector2f
 {
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::P))
 	{
 		sf::Packet packet;
 		packet << Common::Network::MessageType::Terminate;
 		Client::g_networkManager.pushTCPMessage(std::move(packet));
-		return;
+		return {0.0F, 0.0F};
 	}
 
 	sf::Vector2f playerDelta{0.0F, 0.0F};
@@ -50,6 +51,8 @@ auto sendPlayerInput()
 		packet << Common::Network::MessageType::Movement << playerDelta.x << playerDelta.y;
 		Client::g_networkManager.pushUDPMessage(std::move(packet));
 	}
+
+	return playerDelta;
 }
 
 auto parseUDP(std::unordered_map<Common::Network::ClientID, sf::Sprite, Common::Network::ClientIDHash>& sprites, sf::Texture& playerTexture) -> void
@@ -77,9 +80,17 @@ auto parseUDP(std::unordered_map<Common::Network::ClientID, sf::Sprite, Common::
 					iterator = pair;
 				}
 
-				sf::Vector2f position;
-				packet >> position.x >> position.y;
-				iterator->second.setPosition(position);
+				sf::Vector2f remotePosition;
+				packet >> remotePosition.x >> remotePosition.y;
+				auto clientPosition = iterator->second.getPosition();
+
+				const float MAX_CLIENT_POSITION_ERROR = 50.0F;
+				if ((clientPosition - remotePosition).lengthSq() > (MAX_CLIENT_POSITION_ERROR * MAX_CLIENT_POSITION_ERROR))
+				{
+					const float LERP_RATE = 0.01F;
+					auto lerpedPosition   = clientPosition + (remotePosition - clientPosition) * LERP_RATE;
+					iterator->second.setPosition(lerpedPosition);
+				}
 			}
 			break;
 			case Common::Network::MessageType::CreateEntity:
@@ -132,7 +143,7 @@ auto main(int /* argc */, char** argv) -> int
 
 	sf::RenderWindow renderWindow;
 	renderWindow.create(sf::VideoMode{sf::Vector2u{WINDOW_WIDTH, WINDOW_HEIGHT}, BIT_DEPTH}, "Client");
-	renderWindow.setVerticalSyncEnabled(true);
+	renderWindow.setFramerateLimit(60);
 
 	sf::Clock clock;
 	clock.restart();
@@ -164,7 +175,14 @@ auto main(int /* argc */, char** argv) -> int
 
 		Client::g_networkManager.update();
 
-		sendPlayerInput();
+		auto movement = sendPlayerInput();
+		// Predict player movement
+		auto iterator = sprites.find(Client::g_networkManager.getClientID());
+		if (iterator != sprites.end())
+		{
+			iterator->second.move(movement * 200.0F * deltaTime);
+		}
+
 		parseUDP(sprites, playerTexture);
 
 		// Render all sprites

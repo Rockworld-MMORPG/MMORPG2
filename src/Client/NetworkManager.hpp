@@ -27,6 +27,8 @@ namespace Client
 		auto getNextTCPMessage() -> std::optional<sf::Packet>;
 		auto getNextUDPMessage() -> std::optional<sf::Packet>;
 
+		auto getClientID() -> Common::Network::ClientID;
+
 	private:
 		auto sendUDP() -> void;
 		auto receiveUDP() -> void;

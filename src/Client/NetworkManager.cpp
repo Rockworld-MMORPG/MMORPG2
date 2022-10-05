@@ -169,6 +169,11 @@ namespace Client
 		return m_udpQueue.getInbound();
 	}
 
+	auto NetworkManager::getClientID() -> Common::Network::ClientID
+	{
+		return m_clientID;
+	}
+
 	auto NetworkManager::sendUDP() -> void
 	{
 		std::optional<sf::Packet> optPacket;
