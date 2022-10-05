@@ -81,10 +81,17 @@ auto parseUDP(std::unordered_map<Common::Network::ClientID, sf::Sprite, Common::
 				packet >> position.x >> position.y;
 				iterator->second.setPosition(position);
 			}
+			break;
 			case Common::Network::MessageType::CreateEntity:
 			{
 				Common::Network::ClientID_t clientID = -1;
 				packet >> clientID;
+				if (clientID == -1)
+				{
+					// This probably wasn't supposed to happen
+					break;
+				}
+
 				auto iterator = sprites.find(Common::Network::ClientID(clientID));
 				if (iterator == sprites.end())
 				{
