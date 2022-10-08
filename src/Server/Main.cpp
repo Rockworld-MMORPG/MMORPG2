@@ -108,9 +108,9 @@ auto broadcastPlayerPositions() -> void
 	for (const auto entity : playerView)
 	{
 		auto& playerComponent = g_entityManager.getComponent<Player>(entity);
-
-		auto data = Common::Network::MessageData();
-		data << entity << playerComponent.position.x << playerComponent.position.y;
+		auto data             = Common::Network::MessageData();
+		data << entity;
+		playerComponent.serialise(data);
 		g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Position, Common::Network::ClientID(-1), data);
 	}
 }

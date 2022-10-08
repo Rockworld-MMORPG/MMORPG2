@@ -1,5 +1,6 @@
 #include "Game/PlayerManager.hpp"
 #include "Common/Network/ClientID.hpp"
+#include "Common/Network/MessageData.hpp"
 #include "Common/Network/MessageType.hpp"
 #include "EntityManager.hpp"
 #include <SFML/Network/Packet.hpp>
@@ -10,9 +11,14 @@ namespace Server
 
 	PlayerManager g_playerManager;
 
-	auto Player::serialise(sf::Packet& packet) -> void
+	auto Player::serialise(Common::Network::MessageData& data) -> void
 	{
-		packet << position.x << position.y;
+		data << position.x << position.y;
+	}
+
+	auto Player::deserialise(Common::Network::MessageData& data) -> void
+	{
+		data >> position.x >> position.y;
 	}
 
 	auto PlayerManager::createPlayer(const Common::Network::ClientID clientID) -> void

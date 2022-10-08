@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Common/Network/ClientID.hpp"
-#include "Network/SerialisedComponent.hpp"
+#include "Common/Network/SerialisedComponent.hpp"
 #include "SFML/System/Vector2.hpp"
 #include <functional>
 #include <optional>
@@ -9,11 +9,12 @@
 namespace Server
 {
 
-	struct Player : public SerialisedComponent<Player>
+	struct Player : public Common::Network::SerialisedComponent<Player>
 	{
 		sf::Vector2f position;
 
-		auto serialise(sf::Packet& packet) -> void;
+		auto serialise(Common::Network::MessageData& data) -> void;
+		auto deserialise(Common::Network::MessageData& data) -> void;
 	};
 
 	class PlayerManager
