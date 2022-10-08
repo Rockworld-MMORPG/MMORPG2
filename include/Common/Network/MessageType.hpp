@@ -2,13 +2,10 @@
 
 #include <cstdint>
 
-namespace sf
-{
-	class Packet;
-}
-
 namespace Common::Network
 {
+
+	class MessageData;
 
 	enum class MessageType : std::uint8_t
 	{
@@ -25,7 +22,7 @@ namespace Common::Network
 		Position      = 0x13,
 	};
 
-	auto operator<<(sf::Packet& packet, MessageType messageType) -> sf::Packet&;
-	auto operator>>(sf::Packet& packet, MessageType& messageType) -> sf::Packet&;
+	auto operator<<(MessageData& messageData, MessageType messageType) -> MessageData&;
+	auto operator>>(MessageData& messageData, MessageType& messageType) -> MessageData&;
 
 }; // namespace Common::Network
