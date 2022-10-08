@@ -1,18 +1,21 @@
 #pragma once
 
-#include "Common/Network/ClientID.hpp"
-#include "Common/Network/MessageQueue.hpp"
-#include "SFML/Network/IpAddress.hpp"
-#include "SFML/Network/SocketSelector.hpp"
-#include "SFML/Network/TcpListener.hpp"
-#include "SFML/Network/UdpSocket.hpp"
+#include "Common/Network/MessageData.hpp"
+#include "Common/Network/MessageHeader.hpp"
+#include <Common/Network/ClientID.hpp>
+#include <Common/Network/Message.hpp>
+#include <Common/Network/MessageQueue.hpp>
+#include <Common/Network/Protocol.hpp>
+#include <SFML/Network/IpAddress.hpp>
+#include <SFML/Network/SocketSelector.hpp>
+#include <SFML/Network/TcpListener.hpp>
+#include <SFML/Network/UdpSocket.hpp>
 #include <list>
 #include <unordered_map>
 
 namespace Server
 {
 	struct Client;
-	struct Message;
 
 	class NetworkManager
 	{
@@ -22,8 +25,8 @@ namespace Server
 
 		auto update() -> void;
 
-		auto getNextMessage() -> std::optional<Message>;
-		auto pushMessage(Message&& message) -> void;
+		auto getNextMessage() -> std::optional<Common::Network::Message>;
+		auto pushMessage(Common::Network::Protocol protocol, Common::Network::MessageType type, Common::Network::ClientID clientID, Common::Network::MessageData& data) -> void;
 
 		auto resolveClientID(sf::IpAddress ipAddress, std::uint16_t port) -> std::optional<Common::Network::ClientID>;
 		auto setClientUdpPort(Common::Network::ClientID clientID, std::uint16_t udpPort) -> void;
@@ -35,13 +38,14 @@ namespace Server
 		auto closeConnection(Common::Network::ClientID clientID) -> void;
 		auto disconnectClients() -> void;
 
-		auto sendUDP(Message& message) -> void;
-		auto receiveUDP() -> void;
-		auto broadcastUDP(Message& message) -> void;
+		auto getNextMessageIdentifier() -> std::uint64_t;
+		auto validateIncomingMessage(Common::Network::ClientID clientID, Common::Network::MessageHeader& header) -> bool;
 
-		auto sendTCP(Message& message) -> void;
+		auto sendUDP(Common::Network::Message& message) -> void;
+		auto receiveUDP() -> void;
+
+		auto sendTCP(Common::Network::Message& message) -> void;
 		auto receiveTCP(Common::Network::ClientID clientID, Client& client) -> void;
-		auto broadcastTCP(Message& message) -> void;
 
 		sf::SocketSelector m_socketSelector;
 		sf::TcpListener m_tcpListener;
@@ -51,7 +55,9 @@ namespace Server
 		std::unordered_map<std::uint64_t, Common::Network::ClientID> m_clientIPMap;
 		std::list<Common::Network::ClientID> m_clientsPendingDisconnection;
 
-		Common::Network::MessageQueue<Message> m_messageQueue;
+		Common::Network::MessageQueue<Common::Network::Message> m_messageQueue;
+
+		std::uint64_t m_currentMessageIdentifier = 0;
 	};
 
 	extern NetworkManager g_networkManager;
