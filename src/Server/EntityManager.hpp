@@ -30,7 +30,10 @@ namespace Server
 		auto addComponent(const Common::Network::ClientID entity) -> void
 		{
 			auto ent = static_cast<NetworkEntity>(entity.get());
-			m_registry.emplace<Component>(ent);
+			if (!m_registry.all_of<Component>(ent))
+			{
+				m_registry.emplace<Component>(ent);
+			}
 		}
 
 		template<typename Component>

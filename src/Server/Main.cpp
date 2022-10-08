@@ -61,6 +61,8 @@ auto parseUDPMessage(Common::Network::Message& message, const float deltaTime) -
 	{
 		case Common::Network::MessageType::CreateEntity:
 		{
+			g_playerManager.createPlayer(message.header.clientID);
+
 			auto data = Common::Network::MessageData();
 			data << message.header.clientID;
 			g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, Common::Network::ClientID(-1), data);
@@ -117,8 +119,6 @@ auto broadcastPlayerPositions() -> void
 auto main() -> int
 {
 	spdlog::set_level(spdlog::level::debug);
-
-	spdlog::debug("Message header size: {}", sizeof(Common::Network::MessageHeader));
 
 	spdlog::info("Server version {}.{}.{}", Server::Version::getMajor(), Server::Version::getMinor(), Server::Version::getPatch());
 	spdlog::debug("Initialising network manager");
