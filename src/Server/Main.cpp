@@ -9,7 +9,6 @@
 #include "Network/NetworkManager.hpp"
 #include "SFML/Network/Packet.hpp"
 #include "Version.hpp"
-#include "spdlog/sinks/stdout_sinks.h"
 #include <SFML/System/Clock.hpp>
 #include <spdlog/cfg/env.h>
 #include <spdlog/spdlog.h>
@@ -38,7 +37,7 @@ auto parseTCPMessage(Common::Network::Message& message, bool& shouldExit) -> voi
 			g_networkManager.markForDisconnect(message.header.clientID);
 
 			auto data = Common::Network::MessageData();
-			g_networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Disconnect, Common::Network::ClientID(-1), data);
+			g_networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Disconnect, data);
 		}
 		break;
 		case Common::Network::MessageType::Terminate:
@@ -47,7 +46,7 @@ auto parseTCPMessage(Common::Network::Message& message, bool& shouldExit) -> voi
 			shouldExit = true;
 
 			auto data = Common::Network::MessageData();
-			g_networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Disconnect, Common::Network::ClientID(-1), data);
+			g_networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Disconnect, data);
 		}
 		break;
 		default:
@@ -65,7 +64,7 @@ auto parseUDPMessage(Common::Network::Message& message, const float deltaTime) -
 
 			auto data = Common::Network::MessageData();
 			data << message.header.clientID;
-			g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, Common::Network::ClientID(-1), data);
+			g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, data);
 		}
 		break;
 		case Common::Network::MessageType::Movement:
@@ -105,15 +104,18 @@ auto parseMessages(const float deltaTime, bool& shouldExit) -> void
 
 auto broadcastPlayerPositions() -> void
 {
+	auto data = Common::Network::MessageData();
+
 	auto playerView = g_entityManager.view<Player>();
+	data << static_cast<std::uint32_t>(playerView.size());
 	for (const auto entity : playerView)
 	{
 		auto& playerComponent = g_entityManager.getComponent<Player>(entity);
-		auto data             = Common::Network::MessageData();
 		data << entity;
 		playerComponent.serialise(data);
-		g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Position, Common::Network::ClientID(-1), data);
 	}
+
+	g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Position, data);
 }
 
 auto main() -> int

@@ -76,41 +76,31 @@ namespace Server
 
 	auto NetworkManager::pushMessage(const Common::Network::Protocol protocol, const Common::Network::MessageType type, const Common::Network::ClientID clientID, Common::Network::MessageData& data) -> void
 	{
-		auto messageIdentifier = getNextMessageIdentifier();
+		auto message = Common::Network::Message();
+		message.data = data;
 
-		if (clientID.get() == -1)
+		message.header.protocol   = protocol;
+		message.header.clientID   = clientID;
+		message.header.identifier = getNextMessageIdentifier();
+		message.header.type       = type;
+
+		m_messageQueue.pushOutbound(std::move(message));
+	}
+
+	auto NetworkManager::pushMessage(const Common::Network::Protocol protocol, const Common::Network::MessageType type, Common::Network::MessageData& data) -> void
+	{
+		// clientID is -1 so broadcast to all connected clients
+		for (const auto& [identifier, client] : m_clientList)
 		{
-			// clientID is -1 so broadcast to all connected clients
-			for (const auto& [identifier, client] : m_clientList)
-			{
-				auto message = Common::Network::Message();
-				message.data = data;
-
-				message.header.protocol   = protocol;
-				message.header.clientID   = identifier;
-				message.header.identifier = messageIdentifier;
-				message.header.type       = type;
-
-				m_messageQueue.pushOutbound(std::move(message));
-			}
-		}
-		else
-		{
-			auto message = Common::Network::Message();
-			message.data = data;
-
-			message.header.protocol   = protocol;
-			message.header.clientID   = clientID;
-			message.header.identifier = messageIdentifier;
-			message.header.type       = type;
-
-			// clientID is specified so send to the specific client
-			m_messageQueue.pushOutbound(std::move(message));
+			pushMessage(protocol, type, identifier, data);
 		}
 	}
 
 	auto NetworkManager::update() -> void
 	{
+		// Disconnect any clients awaiting disconnection
+		disconnectClients();
+
 		// Clear out the outbound queue
 		auto outboundQueue = m_messageQueue.clearOutbound();
 		for (auto& message : outboundQueue)
@@ -125,9 +115,6 @@ namespace Server
 					break;
 			}
 		}
-
-		// Disconnect any clients awaiting disconnection
-		disconnectClients();
 
 		// Wait up to MAX_SELECTOR_WAIT_TIME for a socket to be ready to receive something
 		const auto MAX_SELECTOR_WAIT_TIME = sf::milliseconds(50);
@@ -216,7 +203,7 @@ namespace Server
 			{
 				// Add the client to the entity manager
 				auto clientID = g_entityManager.create();
-				if (clientID == Common::Network::ClientID(-1))
+				if (clientID.get() == -1)
 				{
 					// We can't use -1 so use something else
 					clientID = g_entityManager.create();
@@ -258,7 +245,10 @@ namespace Server
 		m_socketSelector.remove(*client.tcpSocket);
 		client.tcpSocket->disconnect();
 
-		m_clientIPMap.erase(generateIdentifier(*client.tcpSocket->getRemoteAddress(), client.udpPort));
+		auto ipMapIterator = std::find_if(m_clientIPMap.begin(), m_clientIPMap.end(), [&](const std::pair<std::uint64_t, Common::Network::ClientID> element) {
+			return element.second == clientID;
+		});
+		m_clientIPMap.erase(ipMapIterator);
 		m_clientList.erase(iterator);
 
 		spdlog::debug("Connection closed successfully");
@@ -311,8 +301,15 @@ namespace Server
 
 	auto NetworkManager::sendUDP(Common::Network::Message& message) -> void
 	{
-		sf::IpAddress remoteAddress = m_clientList.at(message.header.clientID).tcpSocket->getRemoteAddress().value();
-		std::uint16_t remotePort    = m_clientList.at(message.header.clientID).udpPort;
+		auto iterator = m_clientList.find(message.header.clientID);
+		if (iterator == m_clientList.end())
+		{
+			spdlog::warn("Tried to send a message to a client ({}) but they don't exist", message.header.clientID);
+			return;
+		}
+
+		sf::IpAddress remoteAddress = iterator->second.tcpSocket->getRemoteAddress().value();
+		std::uint16_t remotePort    = iterator->second.udpPort;
 
 		auto buffer = message.pack();
 		auto status = m_udpSocket.send(buffer.data(), buffer.size(), remoteAddress, remotePort);

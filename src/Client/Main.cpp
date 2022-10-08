@@ -66,33 +66,43 @@ auto sendPlayerInput() -> sf::Vector2f
 	return playerDelta;
 }
 
+auto parseTCP(Common::Network::Message& message) -> void
+{
+	switch (message.header.type)
+	{
+		case Common::Network::MessageType::Disconnect:
+			g_networkManager.disconnect();
+			break;
+		default:
+			break;
+	}
+}
+
 auto parseUDP(Common::Network::Message& message, std::unordered_map<Common::Network::ClientID, sf::Sprite, Common::Network::ClientIDHash>& sprites, sf::Texture& playerTexture) -> void
 {
 	switch (message.header.type)
 	{
 		case Common::Network::MessageType::Position:
 		{
-			Common::Network::ClientID_t clientID = -1;
-			message.data >> clientID;
+			std::uint32_t size = 0;
+			message.data >> size;
 
-			auto iterator = sprites.find(Common::Network::ClientID(clientID));
-			if (iterator == sprites.end())
+			for (auto i = 0; i < size; ++i)
 			{
-				auto [pair, success] = sprites.emplace(clientID, sf::Sprite{});
-				pair->second.setTexture(playerTexture);
-				iterator = pair;
-			}
+				Common::Network::ClientID_t entity = -1;
+				sf::Vector2f remotePosition{0.0F, 0.0F};
 
-			sf::Vector2f remotePosition;
-			message.data >> remotePosition.x >> remotePosition.y;
-			auto clientPosition = iterator->second.getPosition();
+				message.data >> entity >> remotePosition.x >> remotePosition.y;
 
-			const float MAX_CLIENT_POSITION_ERROR = 50.0F;
-			if ((clientPosition - remotePosition).lengthSq() > (MAX_CLIENT_POSITION_ERROR * MAX_CLIENT_POSITION_ERROR))
-			{
-				const float LERP_RATE = 0.01F;
-				auto lerpedPosition   = clientPosition + (remotePosition - clientPosition) * LERP_RATE;
-				iterator->second.setPosition(lerpedPosition);
+				auto iterator = sprites.find(Common::Network::ClientID(entity));
+				if (iterator == sprites.end())
+				{
+					auto [pair, success] = sprites.emplace(entity, sf::Sprite{});
+					pair->second.setTexture(playerTexture);
+					iterator = pair;
+				}
+
+				iterator->second.setPosition(remotePosition);
 			}
 		}
 		break;
@@ -135,6 +145,7 @@ auto parseMessages(std::unordered_map<Common::Network::ClientID, sf::Sprite, Com
 		switch (message.header.protocol)
 		{
 			case Common::Network::Protocol::TCP:
+				parseTCP(message);
 				break;
 			case Common::Network::Protocol::UDP:
 				parseUDP(message, sprites, playerTexture);
