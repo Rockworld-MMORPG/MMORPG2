@@ -69,6 +69,11 @@ namespace Server
 		return m_messageQueue.getInbound();
 	}
 
+	auto NetworkManager::getMessages() -> std::vector<Common::Network::Message>
+	{
+		return m_messageQueue.clearInbound();
+	}
+
 	auto NetworkManager::pushMessage(const Common::Network::Protocol protocol, const Common::Network::MessageType type, const Common::Network::ClientID clientID, Common::Network::MessageData& data) -> void
 	{
 		auto messageIdentifier = getNextMessageIdentifier();

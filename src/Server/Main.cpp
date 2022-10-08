@@ -86,10 +86,9 @@ auto parseUDPMessage(Common::Network::Message& message, const float deltaTime) -
 
 auto parseMessages(const float deltaTime, bool& shouldExit) -> void
 {
-	std::optional<Common::Network::Message> nextMessage;
-	while ((nextMessage = g_networkManager.getNextMessage()).has_value())
+	auto messages = g_networkManager.getMessages();
+	for (auto& message : messages)
 	{
-		auto& message = nextMessage.value();
 		switch (message.header.protocol)
 		{
 			case Common::Network::Protocol::TCP:

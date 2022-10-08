@@ -26,6 +26,7 @@ namespace Server
 		auto update() -> void;
 
 		auto getNextMessage() -> std::optional<Common::Network::Message>;
+		auto getMessages() -> std::vector<Common::Network::Message>;
 		auto pushMessage(Common::Network::Protocol protocol, Common::Network::MessageType type, Common::Network::ClientID clientID, Common::Network::MessageData& data) -> void;
 
 		auto resolveClientID(sf::IpAddress ipAddress, std::uint16_t port) -> std::optional<Common::Network::ClientID>;
