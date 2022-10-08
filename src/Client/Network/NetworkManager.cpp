@@ -12,13 +12,11 @@
 
 namespace Client
 {
-	NetworkManager g_networkManager;
-
-	auto NetworkManager::init() -> void
+	NetworkManager::NetworkManager() :
+	    m_currentMessageIdentifier(0),
+	    m_lastServerMessageIdentifier(0),
+	    m_clientID(-1)
 	{
-		m_connected = false;
-		m_clientID  = Common::Network::ClientID(-1);
-
 		auto status = m_udpSocket.bind(sf::Socket::AnyPort);
 		if (status != sf::Socket::Status::Done)
 		{
@@ -29,11 +27,9 @@ namespace Client
 		spdlog::debug("UDP bound to port {}", m_udpSocket.getLocalPort());
 	}
 
-	auto NetworkManager::shutdown() -> void
+	NetworkManager::~NetworkManager()
 	{
 		disconnect();
-		m_udpSocket.unbind();
-		m_socketSelector.clear();
 	}
 
 	auto NetworkManager::connect() -> void
@@ -48,7 +44,6 @@ namespace Client
 			return;
 		}
 		spdlog::debug("Connected to server successfully");
-		m_connected = true;
 
 		m_messageQueue.clearInbound();
 		m_messageQueue.clearOutbound();
@@ -75,7 +70,6 @@ namespace Client
 					message.data >> clientID;
 					m_clientID = Common::Network::ClientID(clientID);
 					spdlog::debug("Port requested successfully and granted client ID {}", m_clientID.get());
-					m_connected = true;
 
 					m_socketSelector.add(m_tcpSocket);
 					m_socketSelector.add(m_udpSocket);
@@ -84,17 +78,11 @@ namespace Client
 			}
 		}
 
-		m_connected = false;
 		spdlog::warn("Failed to connect");
 	}
 
 	auto NetworkManager::disconnect() -> void
 	{
-		if (!m_connected)
-		{
-			return;
-		}
-
 		spdlog::debug("Disconnecting from server");
 
 		m_messageQueue.clearInbound();
@@ -111,7 +99,6 @@ namespace Client
 
 		m_tcpSocket.disconnect();
 		m_socketSelector.clear();
-		m_connected = false;
 	}
 
 	auto NetworkManager::update() -> void
@@ -176,6 +163,16 @@ namespace Client
 		return m_currentMessageIdentifier++;
 	}
 
+	auto NetworkManager::validateMessage(Common::Network::Message& message) -> bool
+	{
+		if (message.header.identifier <= m_lastServerMessageIdentifier)
+		{
+			return false;
+		}
+		m_lastServerMessageIdentifier = message.header.identifier;
+		return true;
+	}
+
 	auto NetworkManager::sendUDP(const Common::Network::Message& message) -> void
 	{
 		auto buffer = message.pack();
@@ -213,7 +210,10 @@ namespace Client
 		auto message = Common::Network::Message();
 		message.unpack(buffer, length);
 
-		m_messageQueue.pushInbound(std::move(message));
+		if (validateMessage(message))
+		{
+			m_messageQueue.pushInbound(std::move(message));
+		}
 	}
 
 	auto NetworkManager::sendTCP(const Common::Network::Message& message) -> void
@@ -247,7 +247,11 @@ namespace Client
 			{
 				auto message = Common::Network::Message();
 				message.unpack(buffer, length);
-				m_messageQueue.pushInbound(std::move(message));
+
+				if (validateMessage(message))
+				{
+					m_messageQueue.pushInbound(std::move(message));
+				}
 			}
 			// Success
 			break;

@@ -15,8 +15,8 @@ namespace Client
 	class NetworkManager
 	{
 	public:
-		auto init() -> void;
-		auto shutdown() -> void;
+		NetworkManager();
+		~NetworkManager();
 
 		auto connect() -> void;
 		auto disconnect() -> void;
@@ -31,6 +31,7 @@ namespace Client
 
 	private:
 		auto getNextMessageIdentifier() -> std::uint64_t;
+		auto validateMessage(Common::Network::Message& message) -> bool;
 
 		auto sendUDP(const Common::Network::Message& message) -> void;
 		auto receiveUDP() -> void;
@@ -40,7 +41,7 @@ namespace Client
 
 		Common::Network::ClientID m_clientID;
 		std::uint64_t m_currentMessageIdentifier;
-		bool m_connected;
+		std::uint64_t m_lastServerMessageIdentifier;
 
 		sf::SocketSelector m_socketSelector;
 		sf::UdpSocket m_udpSocket;
@@ -48,7 +49,5 @@ namespace Client
 
 		Common::Network::MessageQueue<Common::Network::Message> m_messageQueue;
 	};
-
-	extern NetworkManager g_networkManager;
 
 } // namespace Client
