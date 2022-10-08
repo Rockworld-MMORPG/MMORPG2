@@ -1,5 +1,9 @@
 #include "NetworkManager.hpp"
+#include "Common/Network/ClientID.hpp"
+#include "Common/Network/Message.hpp"
+#include "Common/Network/MessageData.hpp"
 #include "Common/Network/MessageQueue.hpp"
+#include "Common/Network/Protocol.hpp"
 #include "SFML/System/Time.hpp"
 #include "spdlog/fmt/bundled/format.h"
 #include <Common/Network/MessageType.hpp>
@@ -13,6 +17,7 @@ namespace Client
 	auto NetworkManager::init() -> void
 	{
 		m_connected = false;
+		m_clientID  = Common::Network::ClientID(-1);
 
 		auto status = m_udpSocket.bind(sf::Socket::AnyPort);
 		if (status != sf::Socket::Status::Done)
@@ -43,55 +48,43 @@ namespace Client
 			return;
 		}
 		spdlog::debug("Connected to server successfully");
+		m_connected = true;
 
-		{
-			sf::Packet packet;
-			packet << Common::Network::MessageType::Connect << m_udpSocket.getLocalPort();
-			status = m_tcpSocket.send(packet);
+		m_messageQueue.clearInbound();
+		m_messageQueue.clearOutbound();
 
-			if (status != sf::Socket::Status::Done)
-			{
-				spdlog::warn("Failed to send connection message (error code {})", static_cast<std::uint32_t>(status));
-				return;
-			}
-			spdlog::debug("Sent connection message requesting UDP port {}", m_udpSocket.getLocalPort());
-		}
+		auto message              = Common::Network::Message();
+		message.header.clientID   = getClientID();
+		message.header.identifier = getNextMessageIdentifier();
+		message.header.protocol   = Common::Network::Protocol::TCP;
+		message.header.type       = Common::Network::MessageType::Connect;
+		message.data << m_udpSocket.getLocalPort();
 
 		const std::size_t MAX_CONNECTION_ATTEMPTS = 5;
 		for (auto attemptNumber = 0; attemptNumber < MAX_CONNECTION_ATTEMPTS; ++attemptNumber)
 		{
 			spdlog::debug("Awaiting successful connection ({}/{})", attemptNumber, MAX_CONNECTION_ATTEMPTS);
-			sf::Packet packet;
-			status = m_tcpSocket.receive(packet);
-			switch (status)
+			sendTCP(message);
+			receiveTCP();
+			auto messages = m_messageQueue.clearInbound();
+			for (auto& message : messages)
 			{
-				case sf::Socket::Status::Done:
+				if (message.header.type == Common::Network::MessageType::Connect)
 				{
-					Common::Network::MessageType messageType = Common::Network::MessageType::None;
-					packet >> messageType;
-					if (messageType == Common::Network::MessageType::Connect)
-					{
-						Common::Network::ClientID_t clientID = -1;
-						packet >> clientID;
-						spdlog::debug("Port requested successfully and granted client ID {}", clientID);
-						m_clientID  = Common::Network::ClientID(clientID);
-						m_connected = true;
+					Common::Network::ClientID_t clientID = -1;
+					message.data >> clientID;
+					m_clientID = Common::Network::ClientID(clientID);
+					spdlog::debug("Port requested successfully and granted client ID {}", m_clientID.get());
+					m_connected = true;
 
-						m_socketSelector.add(m_tcpSocket);
-						m_socketSelector.add(m_udpSocket);
-						return;
-					}
+					m_socketSelector.add(m_tcpSocket);
+					m_socketSelector.add(m_udpSocket);
+					return;
 				}
-				break;
-				case sf::Socket::Status::Disconnected:
-					disconnect();
-					attemptNumber = MAX_CONNECTION_ATTEMPTS;
-					break;
-				default:
-					// Try again
-					break;
 			}
 		}
+
+		m_connected = false;
 		spdlog::warn("Failed to connect");
 	}
 
@@ -104,28 +97,19 @@ namespace Client
 
 		spdlog::debug("Disconnecting from server");
 
-		sf::Packet packet{};
-		packet << Common::Network::MessageType::Disconnect;
-		auto status = m_tcpSocket.send(packet);
+		m_messageQueue.clearInbound();
+		m_messageQueue.clearOutbound();
 
-		switch (status)
-		{
-			case sf::Socket::Status::Done:
-			{
-				auto attempts                             = 0;
-				const std::size_t MAX_CONNECTION_ATTEMPTS = 5;
-				while ((m_tcpSocket.receive(packet) != sf::Socket::Status::Disconnected) && (attempts < MAX_CONNECTION_ATTEMPTS))
-				{
-					++attempts;
-				}
-			}
-			case sf::Socket::Status::Disconnected:
-				spdlog::debug("Sent disconnect message successfully");
-				break;
-			default:
-				spdlog::warn("Failed to send disconnect message (error code {})", static_cast<std::uint32_t>(status));
-		}
+		auto message              = Common::Network::Message();
+		message.header.clientID   = getClientID();
+		message.header.identifier = getNextMessageIdentifier();
+		message.header.protocol   = Common::Network::Protocol::TCP;
+		message.header.type       = Common::Network::MessageType::Disconnect;
 
+		auto buffer = message.pack();
+		auto status = m_tcpSocket.send(buffer.data(), buffer.size());
+
+		m_tcpSocket.disconnect();
 		m_socketSelector.clear();
 		m_connected = false;
 	}
@@ -145,28 +129,41 @@ namespace Client
 			}
 		}
 
-		sendTCP();
-		sendUDP();
+		auto outboundMessages = m_messageQueue.clearOutbound();
+		for (const auto& message : outboundMessages)
+		{
+			switch (message.header.protocol)
+			{
+				case Common::Network::Protocol::TCP:
+					sendTCP(message);
+					break;
+				case Common::Network::Protocol::UDP:
+					sendUDP(message);
+					break;
+			}
+		}
 	}
 
-	auto NetworkManager::pushTCPMessage(sf::Packet&& packet) -> void
+	auto NetworkManager::pushMessage(const Common::Network::Protocol protocol, const Common::Network::MessageType type, Common::Network::MessageData& messageData) -> void
 	{
-		m_tcpQueue.pushOutbound(std::forward<sf::Packet&&>(packet));
+		auto message              = Common::Network::Message();
+		message.header.clientID   = getClientID();
+		message.header.identifier = getNextMessageIdentifier();
+		message.header.protocol   = protocol;
+		message.header.type       = type;
+
+		message.data = messageData;
+		m_messageQueue.pushOutbound(std::move(message));
 	}
 
-	auto NetworkManager::pushUDPMessage(sf::Packet&& packet) -> void
+	auto NetworkManager::getNextMessage() -> std::optional<Common::Network::Message>
 	{
-		m_udpQueue.pushOutbound(std::forward<sf::Packet&&>(packet));
+		return m_messageQueue.getInbound();
 	}
 
-	auto NetworkManager::getNextTCPMessage() -> std::optional<sf::Packet>
+	auto NetworkManager::getMessages() -> std::vector<Common::Network::Message>
 	{
-		return m_tcpQueue.getInbound();
-	}
-
-	auto NetworkManager::getNextUDPMessage() -> std::optional<sf::Packet>
-	{
-		return m_udpQueue.getInbound();
+		return m_messageQueue.clearInbound();
 	}
 
 	auto NetworkManager::getClientID() -> Common::Network::ClientID
@@ -174,43 +171,34 @@ namespace Client
 		return m_clientID;
 	}
 
-	auto NetworkManager::sendUDP() -> void
+	auto NetworkManager::getNextMessageIdentifier() -> std::uint64_t
 	{
-		std::optional<sf::Packet> optPacket;
-		while ((optPacket = m_udpQueue.getOutbound()).has_value())
-		{
-			if (!m_connected)
-			{
-				spdlog::debug("Tried to send UDP but the client is not connected");
-				return;
-			}
+		return m_currentMessageIdentifier++;
+	}
 
-			auto status = m_udpSocket.send(optPacket.value(), Common::Network::SERVER_ADDRESS, Common::Network::UDP_PORT);
-			switch (status)
-			{
-				case sf::Socket::Status::Done:
-					// Success
-					break;
-				default:
-					spdlog::warn("Dropped packet");
-					break;
-			}
+	auto NetworkManager::sendUDP(const Common::Network::Message& message) -> void
+	{
+		auto buffer = message.pack();
+		auto status = m_udpSocket.send(buffer.data(), buffer.size(), Common::Network::SERVER_ADDRESS, Common::Network::UDP_PORT);
+		switch (status)
+		{
+			case sf::Socket::Status::Done:
+				// Success
+				break;
+			default:
+				spdlog::warn("Dropped packet");
+				break;
 		}
 	}
 
 	auto NetworkManager::receiveUDP() -> void
 	{
-		if (!m_connected)
-		{
-			spdlog::debug("Tried to receive UDP but the client is not connected");
-			return;
-		}
-
-		sf::Packet packet;
+		auto buffer        = std::array<std::uint8_t, Common::Network::MAX_MESSAGE_LENGTH>();
+		std::size_t length = 0;
 		std::optional<sf::IpAddress> optAddress;
 		std::uint16_t remotePort = 0;
 
-		auto status = m_udpSocket.receive(packet, optAddress, remotePort);
+		auto status = m_udpSocket.receive(buffer.data(), buffer.size(), length, optAddress, remotePort);
 		if (status != sf::Socket::Status::Done)
 		{
 			spdlog::warn("Dropped packet");
@@ -222,47 +210,16 @@ namespace Client
 			return;
 		}
 
-		m_udpQueue.pushInbound(std::move(packet));
+		auto message = Common::Network::Message();
+		message.unpack(buffer, length);
+
+		m_messageQueue.pushInbound(std::move(message));
 	}
 
-	auto NetworkManager::sendTCP() -> void
+	auto NetworkManager::sendTCP(const Common::Network::Message& message) -> void
 	{
-		std::optional<sf::Packet> optPacket;
-		while ((optPacket = m_tcpQueue.getOutbound()).has_value())
-		{
-			if (!m_connected)
-			{
-				spdlog::debug("Tried to send TCP but the client is not connected");
-				return;
-			}
-
-			auto status = m_tcpSocket.send(optPacket.value());
-			switch (status)
-			{
-				case sf::Socket::Status::Done:
-					// Success
-					break;
-				case sf::Socket::Status::Disconnected:
-					spdlog::warn("Client was disconnected");
-					disconnect();
-					break;
-				default:
-					spdlog::warn("Dropped packet");
-					break;
-			}
-		}
-	}
-
-	auto NetworkManager::receiveTCP() -> void
-	{
-		if (!m_connected)
-		{
-			spdlog::debug("Tried to receive TCP but the client is not connected");
-			return;
-		}
-
-		sf::Packet packet;
-		auto status = m_tcpSocket.receive(packet);
+		auto buffer = message.pack();
+		auto status = m_tcpSocket.send(buffer.data(), buffer.size());
 		switch (status)
 		{
 			case sf::Socket::Status::Done:
@@ -276,8 +233,32 @@ namespace Client
 				spdlog::warn("Dropped packet");
 				break;
 		}
+	}
 
-		m_tcpQueue.pushInbound(std::move(packet));
+	auto NetworkManager::receiveTCP() -> void
+	{
+		auto buffer        = std::array<std::uint8_t, Common::Network::MAX_MESSAGE_LENGTH>();
+		std::size_t length = 0;
+		auto status        = m_tcpSocket.receive(buffer.data(), buffer.size(), length);
+
+		switch (status)
+		{
+			case sf::Socket::Status::Done:
+			{
+				auto message = Common::Network::Message();
+				message.unpack(buffer, length);
+				m_messageQueue.pushInbound(std::move(message));
+			}
+			// Success
+			break;
+			case sf::Socket::Status::Disconnected:
+				spdlog::warn("Client was disconnected");
+				disconnect();
+				break;
+			default:
+				spdlog::warn("Dropped packet");
+				break;
+		}
 	}
 
 } // namespace Client

@@ -1,5 +1,8 @@
 #include "Common/Network/ClientID.hpp"
+#include "Common/Network/Message.hpp"
+#include "Common/Network/MessageData.hpp"
 #include "Common/Network/MessageType.hpp"
+#include "Common/Network/Protocol.hpp"
 #include "Common/Network/ServerProperties.hpp"
 #include "Network/NetworkManager.hpp"
 #include "SFML/System/Vector2.hpp"
@@ -22,9 +25,15 @@ auto sendPlayerInput() -> sf::Vector2f
 {
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::P))
 	{
-		sf::Packet packet;
-		packet << Common::Network::MessageType::Terminate;
-		g_networkManager.pushTCPMessage(std::move(packet));
+		auto data = Common::Network::MessageData();
+		g_networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Terminate, data);
+		return {0.0F, 0.0F};
+	}
+
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space))
+	{
+		auto data = Common::Network::MessageData();
+		g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, data);
 		return {0.0F, 0.0F};
 	}
 
@@ -49,79 +58,86 @@ auto sendPlayerInput() -> sf::Vector2f
 
 	if (playerDelta.lengthSq() > 0.0F)
 	{
-		sf::Packet packet;
-		packet << Common::Network::MessageType::Movement << playerDelta.x << playerDelta.y;
-		g_networkManager.pushUDPMessage(std::move(packet));
+		auto data = Common::Network::MessageData();
+		data << playerDelta.x << playerDelta.y;
+		g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Movement, data);
 	}
 
 	return playerDelta;
 }
 
-auto parseUDP(std::unordered_map<Common::Network::ClientID, sf::Sprite, Common::Network::ClientIDHash>& sprites, sf::Texture& playerTexture) -> void
+auto parseUDP(Common::Network::Message& message, std::unordered_map<Common::Network::ClientID, sf::Sprite, Common::Network::ClientIDHash>& sprites, sf::Texture& playerTexture) -> void
 {
-	std::optional<sf::Packet> optPacket;
-	while ((optPacket = g_networkManager.getNextUDPMessage()).has_value())
+	switch (message.header.type)
 	{
-		auto& packet = optPacket.value();
-
-		Common::Network::MessageType messageType = Common::Network::MessageType::None;
-		packet >> messageType;
-
-		switch (messageType)
+		case Common::Network::MessageType::Position:
 		{
-			case Common::Network::MessageType::Position:
+			Common::Network::ClientID_t clientID = -1;
+			message.data >> clientID;
+
+			auto iterator = sprites.find(Common::Network::ClientID(clientID));
+			if (iterator == sprites.end())
 			{
-				Common::Network::ClientID_t clientID = -1;
-				packet >> clientID;
-
-				auto iterator = sprites.find(Common::Network::ClientID(clientID));
-				if (iterator == sprites.end())
-				{
-					auto [pair, success] = sprites.emplace(clientID, sf::Sprite{});
-					pair->second.setTexture(playerTexture);
-					iterator = pair;
-				}
-
-				sf::Vector2f remotePosition;
-				packet >> remotePosition.x >> remotePosition.y;
-				auto clientPosition = iterator->second.getPosition();
-
-				const float MAX_CLIENT_POSITION_ERROR = 50.0F;
-				if ((clientPosition - remotePosition).lengthSq() > (MAX_CLIENT_POSITION_ERROR * MAX_CLIENT_POSITION_ERROR))
-				{
-					const float LERP_RATE = 0.01F;
-					auto lerpedPosition   = clientPosition + (remotePosition - clientPosition) * LERP_RATE;
-					iterator->second.setPosition(lerpedPosition);
-				}
+				auto [pair, success] = sprites.emplace(clientID, sf::Sprite{});
+				pair->second.setTexture(playerTexture);
+				iterator = pair;
 			}
-			break;
-			case Common::Network::MessageType::CreateEntity:
+
+			sf::Vector2f remotePosition;
+			message.data >> remotePosition.x >> remotePosition.y;
+			auto clientPosition = iterator->second.getPosition();
+
+			const float MAX_CLIENT_POSITION_ERROR = 50.0F;
+			if ((clientPosition - remotePosition).lengthSq() > (MAX_CLIENT_POSITION_ERROR * MAX_CLIENT_POSITION_ERROR))
 			{
-				Common::Network::ClientID_t clientID = -1;
-				packet >> clientID;
-				if (clientID == -1)
-				{
-					// This probably wasn't supposed to happen
-					break;
-				}
-
-				auto iterator = sprites.find(Common::Network::ClientID(clientID));
-				if (iterator == sprites.end())
-				{
-					auto [pair, success] = sprites.emplace(clientID, sf::Sprite{});
-					pair->second.setTexture(playerTexture);
-				}
+				const float LERP_RATE = 0.01F;
+				auto lerpedPosition   = clientPosition + (remotePosition - clientPosition) * LERP_RATE;
+				iterator->second.setPosition(lerpedPosition);
 			}
-			break;
-			case Common::Network::MessageType::DestroyEntity:
+		}
+		break;
+		case Common::Network::MessageType::CreateEntity:
+		{
+			Common::Network::ClientID_t clientID = -1;
+			message.data >> clientID;
+			if (clientID == -1)
 			{
-				Common::Network::ClientID_t clientID = -1;
-				packet >> clientID;
-				sprites.erase(Common::Network::ClientID(clientID));
+				// This probably wasn't supposed to happen
+				break;
 			}
+
+			auto iterator = sprites.find(Common::Network::ClientID(clientID));
+			if (iterator == sprites.end())
+			{
+				auto [pair, success] = sprites.emplace(clientID, sf::Sprite{});
+				pair->second.setTexture(playerTexture);
+			}
+		}
+		break;
+		case Common::Network::MessageType::DestroyEntity:
+		{
+			Common::Network::ClientID_t clientID = -1;
+			message.data >> clientID;
+			sprites.erase(Common::Network::ClientID(clientID));
+		}
+		break;
+		default:
+			// Do nothing
 			break;
-			default:
-				// Do nothing
+	}
+}
+
+auto parseMessages(std::unordered_map<Common::Network::ClientID, sf::Sprite, Common::Network::ClientIDHash>& sprites, sf::Texture& playerTexture)
+{
+	auto messages = g_networkManager.getMessages();
+	for (auto& message : messages)
+	{
+		switch (message.header.protocol)
+		{
+			case Common::Network::Protocol::TCP:
+				break;
+			case Common::Network::Protocol::UDP:
+				parseUDP(message, sprites, playerTexture);
 				break;
 		}
 	}
@@ -130,7 +146,7 @@ auto parseUDP(std::unordered_map<Common::Network::ClientID, sf::Sprite, Common::
 auto main(int /* argc */, char** argv) -> int
 {
 #if !defined(NDEBUG)
-	spdlog::set_level(spdlog::level::debug);
+	spdlog::set_level(spdlog::level::trace);
 #endif
 
 	spdlog::info("Client version {}.{}.{}", Version::getMajor(), Version::getMinor(), Version::getPatch());
@@ -186,7 +202,7 @@ auto main(int /* argc */, char** argv) -> int
 			iterator->second.move(movement * 200.0F * deltaTime);
 		}
 
-		parseUDP(sprites, playerTexture);
+		parseMessages(sprites, playerTexture);
 
 		// Render all sprites
 		renderWindow.clear();
