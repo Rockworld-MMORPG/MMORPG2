@@ -252,9 +252,6 @@ namespace Server
 		m_clientList.erase(iterator);
 
 		spdlog::debug("Connection closed successfully");
-
-		// Remove the client from the entity manager
-		g_entityManager.destroy(clientID);
 	}
 
 	auto NetworkManager::disconnectClients() -> void

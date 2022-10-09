@@ -37,6 +37,7 @@ auto parseTCPMessage(Common::Network::Message& message, bool& shouldExit) -> voi
 		case Common::Network::MessageType::Disconnect:
 		{
 			g_playerManager.destroyPlayer(message.header.clientID);
+			g_entityManager.destroy(message.header.clientID);
 			auto data = Common::Network::MessageData();
 			data << message.header.clientID;
 
@@ -216,7 +217,7 @@ auto main() -> int
 		}
 	};
 
-	const auto MIN_UPDATE_INTERVAL = sf::milliseconds(500);
+	const auto MIN_UPDATE_INTERVAL = sf::milliseconds(50);
 
 	spdlog::debug("Entering main loop");
 	auto networkUpdateThread = std::thread(networkUpdateFunction);
