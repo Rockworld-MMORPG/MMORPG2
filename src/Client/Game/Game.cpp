@@ -1,6 +1,10 @@
 #include "Game/Game.hpp"
+#include "Common/Network/MessageData.hpp"
+#include "Common/Network/MessageType.hpp"
+#include "Common/Network/Protocol.hpp"
 #include "Engine/Engine.hpp"
 #include "SFML/Graphics/RenderTarget.hpp"
+#include "SFML/System/Time.hpp"
 #include "SFML/System/Vector2.hpp"
 #include "SFML/Window/Event.hpp"
 #include "SFML/Window/Keyboard.hpp"
@@ -130,9 +134,13 @@ namespace Client::Game
 						auto data = Common::Network::MessageData();
 						engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, data);
 					}
+					default:
+						break;
 				}
 			}
 			break;
+			default:
+				break;
 		}
 
 		sf::Vector2f playerDelta{0.0F, 0.0F};
@@ -162,7 +170,7 @@ namespace Client::Game
 		}
 	}
 
-	auto Game::update(const float deltaTime) -> void
+	auto Game::update(const sf::Time deltaTime) -> void
 	{
 	}
 

@@ -7,17 +7,16 @@
 namespace Client
 {
 
+	const auto WINDOW_WIDTH  = 1280U;
+	const auto WINDOW_HEIGHT = 720U;
+
 	Engine::Engine(std::filesystem::path assetDir) :
 	    assetDirectory(std::move(assetDir))
 	{
-		m_window.create(sf::VideoMode(sf::Vector2u(1280U, 720U), 32U), "Window");
+		m_window.create(sf::VideoMode(sf::Vector2u(WINDOW_WIDTH, WINDOW_HEIGHT)), "Window");
 		m_window.setVerticalSyncEnabled(true);
+		m_window.setKeyRepeatEnabled(false);
 		m_clock.restart();
-	}
-
-	Engine::~Engine()
-	{
-		m_window.close();
 	}
 
 	auto Engine::pushState(std::unique_ptr<State>&& state) -> void
@@ -47,7 +46,7 @@ namespace Client
 
 		while (!m_shouldExit)
 		{
-			auto deltaTime = m_clock.restart().asSeconds();
+			auto deltaTime = m_clock.restart();
 
 			networkManager.update();
 			auto inboundMessages = networkManager.getMessages();

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "SFML/System/Time.hpp"
 #include <vector>
 
 namespace Common::Network
@@ -26,7 +27,7 @@ namespace Client
 
 		virtual auto parseMessages(std::vector<Common::Network::Message>& messages) -> void {}
 		virtual auto handleEvents(sf::Event& event) -> void{};
-		virtual auto update(float deltaTime) -> void{};
+		virtual auto update(sf::Time deltaTime) -> void{};
 		virtual auto render(sf::RenderTarget& renderTarget) -> void{};
 
 	protected:

@@ -14,7 +14,6 @@ namespace Client
 	{
 	public:
 		Engine(std::filesystem::path assetDir);
-		~Engine();
 
 		auto pushState(std::unique_ptr<State>&& state) -> void;
 		auto popState() -> void;

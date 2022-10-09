@@ -18,7 +18,7 @@ namespace Client::Game
 
 		auto parseMessages(std::vector<Common::Network::Message>& messages) -> void override;
 		auto handleEvents(sf::Event& event) -> void override;
-		auto update(float deltaTime) -> void override;
+		auto update(sf::Time deltaTime) -> void override;
 		auto render(sf::RenderTarget& renderTarget) -> void override;
 
 	private:
