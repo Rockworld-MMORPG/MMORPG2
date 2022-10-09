@@ -1,3 +1,4 @@
+#include "Common/Input/Action.hpp"
 #include "Common/Network/ClientID.hpp"
 #include "Common/Network/Message.hpp"
 #include "Common/Network/MessageData.hpp"
@@ -6,6 +7,7 @@
 #include "Common/Network/Protocol.hpp"
 #include "EntityManager.hpp"
 #include "Game/PlayerManager.hpp"
+#include "Input/InputState.hpp"
 #include "Network/NetworkManager.hpp"
 #include "SFML/Network/Packet.hpp"
 #include "Version.hpp"
@@ -61,22 +63,58 @@ auto parseUDPMessage(Common::Network::Message& message, const float deltaTime) -
 		case Common::Network::MessageType::CreateEntity:
 		{
 			g_playerManager.createPlayer(message.header.clientID);
+			g_entityManager.addComponent<Input::InputState>(message.header.clientID);
 
 			auto data = Common::Network::MessageData();
 			data << message.header.clientID;
 			g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, data);
 		}
 		break;
-		case Common::Network::MessageType::Movement:
+		case Common::Network::MessageType::Action:
 		{
-			sf::Vector2f movementDelta{0.0F, 0.0F};
-			message.data >> movementDelta.x >> movementDelta.y;
+			auto action = Common::Input::Action();
+			message.data >> action;
 
-			auto optPlayer = g_playerManager.getPlayer(message.header.clientID);
-			if (optPlayer.has_value())
+			switch (action.type)
 			{
-				const float PLAYER_MOVEMENT_SPEED = 200.0F;
-				optPlayer.value().get().position += movementDelta * deltaTime * PLAYER_MOVEMENT_SPEED;
+				case Common::Input::ActionType::MoveForward:
+				{
+					auto optInputState = g_entityManager.getComponent<Input::InputState>(message.header.clientID);
+					if (optInputState.has_value())
+					{
+						optInputState->get().forwards = (action.state == Common::Input::Action::State::Begin);
+					}
+				}
+				break;
+				case Common::Input::ActionType::MoveBackward:
+				{
+					auto optInputState = g_entityManager.getComponent<Input::InputState>(message.header.clientID);
+					if (optInputState.has_value())
+					{
+						optInputState->get().backwards = (action.state == Common::Input::Action::State::Begin);
+					}
+				}
+				break;
+				case Common::Input::ActionType::StrafeLeft:
+				{
+					auto optInputState = g_entityManager.getComponent<Input::InputState>(message.header.clientID);
+					if (optInputState.has_value())
+					{
+						optInputState->get().left = (action.state == Common::Input::Action::State::Begin);
+					}
+				}
+				break;
+				case Common::Input::ActionType::StrafeRight:
+				{
+					auto optInputState = g_entityManager.getComponent<Input::InputState>(message.header.clientID);
+					if (optInputState.has_value())
+					{
+						optInputState->get().right = (action.state == Common::Input::Action::State::Begin);
+					}
+				}
+				break;
+				default:
+					break;
 			}
 		}
 		break;
@@ -118,6 +156,39 @@ auto broadcastPlayerPositions() -> void
 	g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Position, data);
 }
 
+auto updatePlayers(sf::Time deltaTime) -> void
+{
+	auto fDt = deltaTime.asSeconds();
+
+	auto& registry = g_entityManager.getRegistry();
+	auto view      = registry.view<Player, Input::InputState>();
+	for (const auto entity : view)
+	{
+		auto& playerComponent = registry.get<Player>(entity);
+		auto& inputComponent  = registry.get<Input::InputState>(entity);
+
+		sf::Vector2f delta{0.0F, 0.0F};
+		if (inputComponent.forwards)
+		{
+			delta.y += 200.0F * fDt;
+		}
+		if (inputComponent.backwards)
+		{
+			delta.y -= 200.0F * fDt;
+		}
+		if (inputComponent.left)
+		{
+			delta.x -= 200.0F * fDt;
+		}
+		if (inputComponent.right)
+		{
+			delta.x += 200.0F * fDt;
+		}
+
+		playerComponent.position += delta;
+	}
+}
+
 auto main() -> int
 {
 	spdlog::set_level(spdlog::level::debug);
@@ -137,10 +208,11 @@ auto main() -> int
 	spdlog::debug("Entering main loop");
 	while (!shouldExit)
 	{
-		float deltaTime = clock.restart().asSeconds();
+		auto deltaTime = clock.restart();
 
 		g_networkManager.update();
-		parseMessages(deltaTime, shouldExit);
+		parseMessages(deltaTime.asSeconds(), shouldExit);
+		updatePlayers(deltaTime);
 		broadcastPlayerPositions();
 	}
 

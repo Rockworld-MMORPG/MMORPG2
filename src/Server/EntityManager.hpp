@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/Network/ClientID.hpp"
+#include "entt/entity/registry.hpp"
 #include "entt/entt.hpp"
 #include <functional>
 #include <optional>
@@ -67,6 +68,11 @@ namespace Server
 		auto view()
 		{
 			return m_registry.view<Component>();
+		}
+
+		auto getRegistry() -> entt::basic_registry<NetworkEntity>&
+		{
+			return m_registry;
 		}
 
 	private:

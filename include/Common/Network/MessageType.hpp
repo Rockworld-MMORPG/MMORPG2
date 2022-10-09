@@ -20,6 +20,7 @@ namespace Common::Network
 		DestroyEntity = 0x11,
 		Movement      = 0x12,
 		Position      = 0x13,
+		Action        = 0x14,
 	};
 
 	auto operator<<(MessageData& messageData, MessageType messageType) -> MessageData&;

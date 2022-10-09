@@ -1,8 +1,11 @@
 #include "Game/Game.hpp"
+#include "Common/Input/Action.hpp"
+#include "Common/Input/ActionType.hpp"
 #include "Common/Network/MessageData.hpp"
 #include "Common/Network/MessageType.hpp"
 #include "Common/Network/Protocol.hpp"
 #include "Engine/Engine.hpp"
+#include "Network/NetworkManager.hpp"
 #include "SFML/Graphics/RenderTarget.hpp"
 #include "SFML/System/Time.hpp"
 #include "SFML/System/Vector2.hpp"
@@ -108,6 +111,18 @@ namespace Client::Game
 		}
 	}
 
+	auto sendAction(const Common::Input::ActionType actionType, const Common::Input::Action::State actionState, NetworkManager& networkManager) -> void
+	{
+		auto action  = Common::Input::Action();
+		action.type  = actionType;
+		action.state = actionState;
+
+		auto data = Common::Network::MessageData();
+		data << action;
+
+		networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Action, data);
+	}
+
 	auto Game::handleEvents(sf::Event& event) -> void
 	{
 		switch (event.type)
@@ -117,12 +132,41 @@ namespace Client::Game
 				break;
 			case sf::Event::KeyPressed:
 			{
+				switch (event.key.code)
+				{
+					case sf::Keyboard::Key::W:
+						sendAction(Common::Input::ActionType::MoveForward, Common::Input::Action::State::Begin, engine.networkManager);
+						break;
+					case sf::Keyboard::Key::A:
+						sendAction(Common::Input::ActionType::StrafeLeft, Common::Input::Action::State::Begin, engine.networkManager);
+						break;
+					case sf::Keyboard::Key::S:
+						sendAction(Common::Input::ActionType::MoveBackward, Common::Input::Action::State::Begin, engine.networkManager);
+						break;
+					case sf::Keyboard::Key::D:
+						sendAction(Common::Input::ActionType::StrafeRight, Common::Input::Action::State::Begin, engine.networkManager);
+						break;
+					default:
+						break;
+				}
 			}
 			break;
 			case sf::Event::KeyReleased:
 			{
 				switch (event.key.code)
 				{
+					case sf::Keyboard::Key::W:
+						sendAction(Common::Input::ActionType::MoveForward, Common::Input::Action::State::End, engine.networkManager);
+						break;
+					case sf::Keyboard::Key::A:
+						sendAction(Common::Input::ActionType::StrafeLeft, Common::Input::Action::State::End, engine.networkManager);
+						break;
+					case sf::Keyboard::Key::S:
+						sendAction(Common::Input::ActionType::MoveBackward, Common::Input::Action::State::End, engine.networkManager);
+						break;
+					case sf::Keyboard::Key::D:
+						sendAction(Common::Input::ActionType::StrafeRight, Common::Input::Action::State::End, engine.networkManager);
+						break;
 					case sf::Keyboard::Key::P:
 					{
 						auto data = Common::Network::MessageData();
@@ -141,32 +185,6 @@ namespace Client::Game
 			break;
 			default:
 				break;
-		}
-
-		sf::Vector2f playerDelta{0.0F, 0.0F};
-
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
-		{
-			playerDelta.x -= 1.0F;
-		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
-		{
-			playerDelta.x += 1.0F;
-		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
-		{
-			playerDelta.y -= 1.0F;
-		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S))
-		{
-			playerDelta.y += 1.0F;
-		}
-
-		if (playerDelta.lengthSq() > 0.0F)
-		{
-			auto data = Common::Network::MessageData();
-			data << playerDelta.x << playerDelta.y;
-			engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Movement, data);
 		}
 	}
 
