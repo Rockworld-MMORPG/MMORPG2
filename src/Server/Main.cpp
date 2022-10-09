@@ -36,10 +36,13 @@ auto parseTCPMessage(Common::Network::Message& message, bool& shouldExit) -> voi
 		case Common::Network::MessageType::Disconnect:
 		{
 			g_playerManager.destroyPlayer(message.header.clientID);
+			auto data = Common::Network::MessageData();
+			data << message.header.clientID;
+
 			g_networkManager.markForDisconnect(message.header.clientID);
 
-			auto data = Common::Network::MessageData();
-			g_networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Disconnect, data);
+			g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::DestroyEntity, data);
+			g_networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Disconnect, message.header.clientID, data);
 		}
 		break;
 		case Common::Network::MessageType::Terminate:
@@ -56,7 +59,7 @@ auto parseTCPMessage(Common::Network::Message& message, bool& shouldExit) -> voi
 	}
 }
 
-auto parseUDPMessage(Common::Network::Message& message, const float deltaTime) -> void
+auto parseUDPMessage(Common::Network::Message& message) -> void
 {
 	switch (message.header.type)
 	{
@@ -123,7 +126,7 @@ auto parseUDPMessage(Common::Network::Message& message, const float deltaTime) -
 	}
 }
 
-auto parseMessages(const float deltaTime, bool& shouldExit) -> void
+auto parseMessages(bool& shouldExit) -> void
 {
 	auto messages = g_networkManager.getMessages();
 	for (auto& message : messages)
@@ -134,7 +137,7 @@ auto parseMessages(const float deltaTime, bool& shouldExit) -> void
 				parseTCPMessage(message, shouldExit);
 				break;
 			case Common::Network::Protocol::UDP:
-				parseUDPMessage(message, deltaTime);
+				parseUDPMessage(message);
 				break;
 		}
 	}
@@ -211,7 +214,7 @@ auto main() -> int
 		auto deltaTime = clock.restart();
 
 		g_networkManager.update();
-		parseMessages(deltaTime.asSeconds(), shouldExit);
+		parseMessages(shouldExit);
 		updatePlayers(deltaTime);
 		broadcastPlayerPositions();
 	}
