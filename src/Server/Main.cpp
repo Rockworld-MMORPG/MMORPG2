@@ -10,6 +10,7 @@
 #include "Input/InputState.hpp"
 #include "Network/NetworkManager.hpp"
 #include "SFML/Network/Packet.hpp"
+#include "SFML/System/Time.hpp"
 #include "Version.hpp"
 #include <SFML/System/Clock.hpp>
 #include <spdlog/cfg/env.h>
@@ -208,16 +209,29 @@ auto main() -> int
 	clock.restart();
 	bool shouldExit = false;
 
+	auto networkUpdateFunction = [&]() {
+		while (!shouldExit)
+		{
+			g_networkManager.update();
+		}
+	};
+
+	const auto MIN_UPDATE_INTERVAL = sf::milliseconds(500);
+
 	spdlog::debug("Entering main loop");
+	auto networkUpdateThread = std::thread(networkUpdateFunction);
 	while (!shouldExit)
 	{
 		auto deltaTime = clock.restart();
 
-		g_networkManager.update();
 		parseMessages(shouldExit);
 		updatePlayers(deltaTime);
 		broadcastPlayerPositions();
+
+		// Sleep the thread until it's time to parse again
+		std::this_thread::sleep_for((MIN_UPDATE_INTERVAL - clock.getElapsedTime()).toDuration());
 	}
+	networkUpdateThread.join();
 
 	spdlog::info("Shutting down network manager");
 	g_networkManager.shutdown();
