@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Engine/State.hpp"
+#include "World/Level.hpp"
+#include "World/TerrainRenderer.hpp"
 #include <Common/Network/ClientID.hpp>
 #include <Common/Network/Message.hpp>
 #include <Common/Network/NetworkEntity.hpp>
@@ -24,6 +26,9 @@ namespace Client::Game
 	private:
 		auto parseTCP(Common::Network::Message& message) -> void;
 		auto parseUDP(Common::Network::Message& message) -> void;
+
+		World::Level m_level;
+		World::TerrainRenderer m_terrainRenderer;
 
 		entt::basic_registry<Common::Network::NetworkEntity> m_registry;
 		sf::Texture m_playerTexture;

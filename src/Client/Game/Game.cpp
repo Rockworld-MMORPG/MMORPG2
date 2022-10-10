@@ -1,9 +1,10 @@
 #include "Game/Game.hpp"
-#include "Common/Input/InputState.hpp"
 #include "Engine/Engine.hpp"
 #include "Network/NetworkManager.hpp"
+#include "World/Level.hpp"
 #include <Common/Input/Action.hpp>
 #include <Common/Input/ActionType.hpp>
+#include <Common/Input/InputState.hpp>
 #include <Common/Network/MessageData.hpp>
 #include <Common/Network/MessageType.hpp>
 #include <Common/Network/NetworkEntity.hpp>
@@ -14,6 +15,7 @@
 #include <SFML/System/Vector2.hpp>
 #include <SFML/Window/Event.hpp>
 #include <SFML/Window/Keyboard.hpp>
+#include <fstream>
 #include <spdlog/spdlog.h>
 
 namespace Client::Game
@@ -22,13 +24,30 @@ namespace Client::Game
 	Game::Game(Engine& engine) :
 	    State(engine)
 	{
-		m_playerTexture.loadFromFile(engine.assetDirectory / "player.png");
+		auto success = m_playerTexture.loadFromFile(engine.assetDirectory / "player.png");
 		engine.networkManager.connect();
 
 		engine.inputManager.bindAction(sf::Keyboard::W, Common::Input::ActionType::MoveForward);
 		engine.inputManager.bindAction(sf::Keyboard::A, Common::Input::ActionType::StrafeLeft);
 		engine.inputManager.bindAction(sf::Keyboard::S, Common::Input::ActionType::MoveBackward);
 		engine.inputManager.bindAction(sf::Keyboard::D, Common::Input::ActionType::StrafeRight);
+
+		std::ifstream reader(engine.assetDirectory / "test_level.dat", std ::ios::binary | std::ios::in | std::ios::ate);
+		auto fileLength = reader.tellg();
+		reader.seekg(std::ios::beg);
+		auto buffer = std::vector<char>();
+		buffer.resize(fileLength);
+		reader.read(buffer.data(), fileLength);
+
+		for (auto yPos = 0; yPos < World::LEVEL_HEIGHT; ++yPos)
+		{
+			for (auto xPos = 0; xPos < World::LEVEL_WIDTH; ++xPos)
+			{
+				m_level.setTile(xPos, yPos, buffer.at(xPos + yPos * World::LEVEL_WIDTH));
+			}
+		}
+
+		m_terrainRenderer.addLevel(m_level);
 	}
 
 	Game::~Game() = default;
@@ -218,6 +237,8 @@ namespace Client::Game
 
 	auto Game::render(sf::RenderTarget& renderTarget) -> void
 	{
+		m_terrainRenderer.render(renderTarget);
+
 		for (const auto entity : m_registry.view<sf::Sprite>())
 		{
 			renderTarget.draw(m_registry.get<sf::Sprite>(entity));
