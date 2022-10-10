@@ -1,5 +1,3 @@
-#pragma once
-
 #include "Common/Input/InputState.hpp"
 
 namespace Common::Input
