@@ -8,7 +8,7 @@ target_include_directories(
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PUBLIC ${mmorpg_SOURCE_DIR}/include)
 
-target_link_libraries(client PRIVATE common)
+target_link_libraries(client PRIVATE common SFML::Graphics SFML::Audio)
 target_compile_features(client PRIVATE cxx_std_20)
 
 set(CLIENT_VERSION_MAJOR 0)

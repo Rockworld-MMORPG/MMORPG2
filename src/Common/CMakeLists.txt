@@ -15,6 +15,6 @@ target_include_directories(
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PUBLIC ${mmorpg_SOURCE_DIR}/include)
 
-target_link_libraries(common PUBLIC SFML::Graphics SFML::Network SFML::Audio EnTT::EnTT spdlog::spdlog)
+target_link_libraries(common PUBLIC SFML::Network EnTT::EnTT spdlog::spdlog)
 
 set_target_properties(common PROPERTIES VERSION 0.1.0 SOVERSION 0)
