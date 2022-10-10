@@ -24,6 +24,11 @@ namespace Client::Game
 	{
 		m_playerTexture.loadFromFile(engine.assetDirectory / "player.png");
 		engine.networkManager.connect();
+
+		engine.inputManager.bindAction(sf::Keyboard::W, Common::Input::ActionType::MoveForward);
+		engine.inputManager.bindAction(sf::Keyboard::A, Common::Input::ActionType::StrafeLeft);
+		engine.inputManager.bindAction(sf::Keyboard::S, Common::Input::ActionType::MoveBackward);
+		engine.inputManager.bindAction(sf::Keyboard::D, Common::Input::ActionType::StrafeRight);
 	}
 
 	Game::~Game() = default;
@@ -142,43 +147,11 @@ namespace Client::Game
 			case sf::Event::Closed:
 				engine.setShouldExit(true);
 				break;
-			case sf::Event::KeyPressed:
-			{
-				switch (event.key.code)
-				{
-					case sf::Keyboard::Key::W:
-						sendAction(Common::Input::ActionType::MoveForward, Common::Input::Action::State::Begin, engine.networkManager);
-						break;
-					case sf::Keyboard::Key::A:
-						sendAction(Common::Input::ActionType::StrafeLeft, Common::Input::Action::State::Begin, engine.networkManager);
-						break;
-					case sf::Keyboard::Key::S:
-						sendAction(Common::Input::ActionType::MoveBackward, Common::Input::Action::State::Begin, engine.networkManager);
-						break;
-					case sf::Keyboard::Key::D:
-						sendAction(Common::Input::ActionType::StrafeRight, Common::Input::Action::State::Begin, engine.networkManager);
-						break;
-					default:
-						break;
-				}
-			}
-			break;
+				break;
 			case sf::Event::KeyReleased:
 			{
 				switch (event.key.code)
 				{
-					case sf::Keyboard::Key::W:
-						sendAction(Common::Input::ActionType::MoveForward, Common::Input::Action::State::End, engine.networkManager);
-						break;
-					case sf::Keyboard::Key::A:
-						sendAction(Common::Input::ActionType::StrafeLeft, Common::Input::Action::State::End, engine.networkManager);
-						break;
-					case sf::Keyboard::Key::S:
-						sendAction(Common::Input::ActionType::MoveBackward, Common::Input::Action::State::End, engine.networkManager);
-						break;
-					case sf::Keyboard::Key::D:
-						sendAction(Common::Input::ActionType::StrafeRight, Common::Input::Action::State::End, engine.networkManager);
-						break;
 					case sf::Keyboard::Key::P:
 					{
 						auto data = Common::Network::MessageData();
@@ -202,33 +175,44 @@ namespace Client::Game
 
 	auto Game::update(const sf::Time deltaTime) -> void
 	{
-		auto fDt = deltaTime.asSeconds();
+		auto changedStates = engine.inputManager.getChangedStates();
+		for (const auto actionType : changedStates)
+		{
+			auto pressed = engine.inputManager.getState(actionType).isPressed;
+			auto action  = Common::Input::Action();
+			action.state = pressed ? Common::Input::Action::State::Begin : Common::Input::Action::State::End;
+			action.type  = actionType;
+
+			auto data = Common::Network::MessageData();
+			data << action;
+			engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Action, data);
+		}
 
 		for (const auto entity : m_registry.view<sf::Sprite, Common::Input::InputState>())
 		{
 			auto& input  = m_registry.get<Common::Input::InputState>(entity);
 			auto& sprite = m_registry.get<sf::Sprite>(entity);
 
-			auto delta = sf::Vector2f(0.0F, 0.0F);
+			auto deltaPosition = sf::Vector2f(0.0F, 0.0F);
 			if (input.forwards)
 			{
-				delta.y -= 200.0F;
+				deltaPosition.y -= 200.0F;
 			}
 			if (input.backwards)
 			{
-				delta.y += 200.0F;
+				deltaPosition.y += 200.0F;
 			}
 			if (input.left)
 			{
-				delta.x -= 200.0F;
+				deltaPosition.x -= 200.0F;
 			}
 			if (input.right)
 			{
-				delta.x += 200.0F;
+				deltaPosition.x += 200.0F;
 			}
 
-			delta *= fDt;
-			sprite.move(delta);
+			deltaPosition *= deltaTime.asSeconds();
+			sprite.move(deltaPosition);
 		}
 	}
 

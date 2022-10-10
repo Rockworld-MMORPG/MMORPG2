@@ -55,9 +55,11 @@ namespace Client
 			auto event = sf::Event();
 			while (m_window.pollEvent(event))
 			{
+				inputManager.parseEvents(event);
 				getState().handleEvents(event);
 			}
 
+			inputManager.update(deltaTime);
 			getState().update(deltaTime);
 
 			m_window.clear();

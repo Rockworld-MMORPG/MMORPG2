@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/State.hpp"
+#include "Input/InputManager.hpp"
 #include "Network/NetworkManager.hpp"
 #include "SFML/Graphics/RenderWindow.hpp"
 #include <filesystem>
@@ -23,6 +24,7 @@ namespace Client
 		auto setShouldExit(bool shouldExit) -> void;
 
 		NetworkManager networkManager;
+		InputManager inputManager;
 		std::filesystem::path assetDirectory;
 
 	private:
