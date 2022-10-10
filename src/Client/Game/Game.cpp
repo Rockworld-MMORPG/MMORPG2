@@ -1,16 +1,20 @@
 #include "Game/Game.hpp"
-#include "Common/Input/Action.hpp"
-#include "Common/Input/ActionType.hpp"
-#include "Common/Network/MessageData.hpp"
-#include "Common/Network/MessageType.hpp"
-#include "Common/Network/Protocol.hpp"
+#include "Common/Input/InputState.hpp"
 #include "Engine/Engine.hpp"
 #include "Network/NetworkManager.hpp"
-#include "SFML/Graphics/RenderTarget.hpp"
-#include "SFML/System/Time.hpp"
-#include "SFML/System/Vector2.hpp"
-#include "SFML/Window/Event.hpp"
-#include "SFML/Window/Keyboard.hpp"
+#include <Common/Input/Action.hpp>
+#include <Common/Input/ActionType.hpp>
+#include <Common/Network/MessageData.hpp>
+#include <Common/Network/MessageType.hpp>
+#include <Common/Network/NetworkEntity.hpp>
+#include <Common/Network/Protocol.hpp>
+#include <SFML/Graphics/RenderTarget.hpp>
+#include <SFML/Graphics/Sprite.hpp>
+#include <SFML/System/Time.hpp>
+#include <SFML/System/Vector2.hpp>
+#include <SFML/Window/Event.hpp>
+#include <SFML/Window/Keyboard.hpp>
+#include <spdlog/spdlog.h>
 
 namespace Client::Game
 {
@@ -40,53 +44,61 @@ namespace Client::Game
 	{
 		switch (message.header.type)
 		{
-			case Common::Network::MessageType::Position:
+			case Common::Network::MessageType::InputState:
 			{
-				std::uint32_t size = 0;
+				auto size = std::uint32_t(0);
 				message.data >> size;
 
 				for (auto i = 0; i < size; ++i)
 				{
-					Common::Network::ClientID_t entity = -1;
-					sf::Vector2f remotePosition{0.0F, 0.0F};
+					auto entity     = Common::Network::ClientID_t(-1);
+					auto inputState = Common::Input::InputState();
+					message.data >> entity >> inputState;
 
-					message.data >> entity >> remotePosition.x >> remotePosition.y;
-
-					auto iterator = m_sprites.find(Common::Network::ClientID(entity));
-					if (iterator == m_sprites.end())
+					auto ent = static_cast<Common::Network::NetworkEntity>(entity);
+					if (m_registry.all_of<Common::Input::InputState>(ent))
 					{
-						auto [pair, success] = m_sprites.emplace(entity, sf::Sprite{});
-						pair->second.setTexture(m_playerTexture);
-						iterator = pair;
+						auto& input = m_registry.get<Common::Input::InputState>(ent) = inputState;
 					}
-
-					iterator->second.setPosition(remotePosition);
 				}
 			}
 			break;
 			case Common::Network::MessageType::CreateEntity:
 			{
-				Common::Network::ClientID_t clientID = -1;
-				message.data >> clientID;
-				if (clientID == -1)
+				Common::Network::ClientID_t entity = -1;
+				message.data >> entity;
+				if (entity == -1)
 				{
 					// This probably wasn't supposed to happen
 					break;
 				}
 
-				auto iterator = m_sprites.find(Common::Network::ClientID(clientID));
-				if (iterator == m_sprites.end())
+				auto ent = static_cast<Common::Network::NetworkEntity>(entity);
+				if (!m_registry.valid(ent))
 				{
-					auto [pair, success] = m_sprites.emplace(clientID, sf::Sprite{});
-					pair->second.setTexture(m_playerTexture);
+					auto newEntity = m_registry.create(ent);
+					if (newEntity != ent)
+					{
+						m_registry.destroy(newEntity);
+						spdlog::warn("Failed to create entity {}", entity);
+						break;
+					}
+
+					auto& sprite = m_registry.emplace<sf::Sprite>(newEntity);
+					sprite.setTexture(m_playerTexture);
+					m_registry.emplace<Common::Input::InputState>(newEntity);
 				}
 			}
 			break;
 			case Common::Network::MessageType::DestroyEntity:
 			{
-				Common::Network::ClientID_t clientID = -1;
-				message.data >> clientID;
-				m_sprites.erase(Common::Network::ClientID(clientID));
+				Common::Network::ClientID_t entity = -1;
+				message.data >> entity;
+				auto ent = static_cast<Common::Network::NetworkEntity>(entity);
+				if (m_registry.valid(ent))
+				{
+					m_registry.destroy(ent);
+				}
 			}
 			break;
 			default:
@@ -190,13 +202,41 @@ namespace Client::Game
 
 	auto Game::update(const sf::Time deltaTime) -> void
 	{
+		auto fDt = deltaTime.asSeconds();
+
+		for (const auto entity : m_registry.view<sf::Sprite, Common::Input::InputState>())
+		{
+			auto& input  = m_registry.get<Common::Input::InputState>(entity);
+			auto& sprite = m_registry.get<sf::Sprite>(entity);
+
+			auto delta = sf::Vector2f(0.0F, 0.0F);
+			if (input.forwards)
+			{
+				delta.y -= 200.0F;
+			}
+			if (input.backwards)
+			{
+				delta.y += 200.0F;
+			}
+			if (input.left)
+			{
+				delta.x -= 200.0F;
+			}
+			if (input.right)
+			{
+				delta.x += 200.0F;
+			}
+
+			delta *= fDt;
+			sprite.move(delta);
+		}
 	}
 
 	auto Game::render(sf::RenderTarget& renderTarget) -> void
 	{
-		for (auto& [id, sprite] : m_sprites)
+		for (const auto entity : m_registry.view<sf::Sprite>())
 		{
-			renderTarget.draw(sprite);
+			renderTarget.draw(m_registry.get<sf::Sprite>(entity));
 		}
 	}
 

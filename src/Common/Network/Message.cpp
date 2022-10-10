@@ -35,7 +35,7 @@ namespace Common::Network
 		ostream << "\tData:\n\t\t";
 		for (auto i = 0; i < message.data.size(); ++i)
 		{
-			ostream << fmt::format("{:X}", val[i]);
+			ostream << fmt::format("{:02X}", val[i]);
 			if (i % 4 == 0 && i > 0)
 			{
 				ostream << " ";

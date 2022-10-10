@@ -9,7 +9,7 @@ namespace Common::Network
 
 	auto MessageData::operator<<(const bool value) -> MessageData&
 	{
-		m_data.emplace_back(static_cast<std::uint8_t>(value));
+		m_data.emplace_back(value ? std::uint8_t(0xFF) : std::uint8_t(0xAA));
 		return *this;
 	}
 
@@ -82,7 +82,7 @@ namespace Common::Network
 
 	auto MessageData::operator>>(bool& value) -> MessageData&
 	{
-		value = (m_data.at(m_readHead) != 0x00);
+		value = !(m_data.at(m_readHead) != 0xFF);
 		m_readHead += 1;
 		return *this;
 	}

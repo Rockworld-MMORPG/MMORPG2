@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Common/Network/ClientID.hpp"
-#include "entt/entity/registry.hpp"
-#include "entt/entt.hpp"
+#include <Common/Network/NetworkEntity.hpp>
+#include <entt/entity/registry.hpp>
+#include <entt/entt.hpp>
 #include <functional>
 #include <optional>
 

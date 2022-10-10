@@ -1,4 +1,5 @@
 #include "Common/Input/Action.hpp"
+#include "Common/Input/InputState.hpp"
 #include "Common/Network/ClientID.hpp"
 #include "Common/Network/Message.hpp"
 #include "Common/Network/MessageData.hpp"
@@ -7,7 +8,6 @@
 #include "Common/Network/Protocol.hpp"
 #include "EntityManager.hpp"
 #include "Game/PlayerManager.hpp"
-#include "Input/InputState.hpp"
 #include "Network/NetworkManager.hpp"
 #include "SFML/Network/Packet.hpp"
 #include "SFML/System/Time.hpp"
@@ -68,7 +68,7 @@ auto parseUDPMessage(Common::Network::Message& message) -> void
 		case Common::Network::MessageType::CreateEntity:
 		{
 			g_playerManager.createPlayer(message.header.clientID);
-			g_entityManager.addComponent<Input::InputState>(message.header.clientID);
+			g_entityManager.addComponent<Common::Input::InputState>(message.header.clientID);
 
 			auto data = Common::Network::MessageData();
 			data << message.header.clientID;
@@ -84,7 +84,7 @@ auto parseUDPMessage(Common::Network::Message& message) -> void
 			{
 				case Common::Input::ActionType::MoveForward:
 				{
-					auto optInputState = g_entityManager.getComponent<Input::InputState>(message.header.clientID);
+					auto optInputState = g_entityManager.getComponent<Common::Input::InputState>(message.header.clientID);
 					if (optInputState.has_value())
 					{
 						optInputState->get().forwards = (action.state == Common::Input::Action::State::Begin);
@@ -93,7 +93,7 @@ auto parseUDPMessage(Common::Network::Message& message) -> void
 				break;
 				case Common::Input::ActionType::MoveBackward:
 				{
-					auto optInputState = g_entityManager.getComponent<Input::InputState>(message.header.clientID);
+					auto optInputState = g_entityManager.getComponent<Common::Input::InputState>(message.header.clientID);
 					if (optInputState.has_value())
 					{
 						optInputState->get().backwards = (action.state == Common::Input::Action::State::Begin);
@@ -102,7 +102,7 @@ auto parseUDPMessage(Common::Network::Message& message) -> void
 				break;
 				case Common::Input::ActionType::StrafeLeft:
 				{
-					auto optInputState = g_entityManager.getComponent<Input::InputState>(message.header.clientID);
+					auto optInputState = g_entityManager.getComponent<Common::Input::InputState>(message.header.clientID);
 					if (optInputState.has_value())
 					{
 						optInputState->get().left = (action.state == Common::Input::Action::State::Begin);
@@ -111,7 +111,7 @@ auto parseUDPMessage(Common::Network::Message& message) -> void
 				break;
 				case Common::Input::ActionType::StrafeRight:
 				{
-					auto optInputState = g_entityManager.getComponent<Input::InputState>(message.header.clientID);
+					auto optInputState = g_entityManager.getComponent<Common::Input::InputState>(message.header.clientID);
 					if (optInputState.has_value())
 					{
 						optInputState->get().right = (action.state == Common::Input::Action::State::Begin);
@@ -149,16 +149,15 @@ auto broadcastPlayerPositions() -> void
 {
 	auto data = Common::Network::MessageData();
 
-	auto playerView = g_entityManager.view<Player>();
-	data << static_cast<std::uint32_t>(playerView.size());
-	for (const auto entity : playerView)
+	auto inputView = g_entityManager.getRegistry().view<Common::Input::InputState>();
+	data << static_cast<std::uint32_t>(inputView.size());
+	for (const auto entity : inputView)
 	{
-		auto& playerComponent = g_entityManager.getComponent<Player>(entity);
-		data << entity;
-		playerComponent.serialise(data);
+		auto& input = g_entityManager.getRegistry().get<Common::Input::InputState>(entity);
+		data << static_cast<Common::Network::ClientID_t>(entity) << input;
 	}
 
-	g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Position, data);
+	g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::InputState, data);
 }
 
 auto updatePlayers(sf::Time deltaTime) -> void
@@ -166,11 +165,11 @@ auto updatePlayers(sf::Time deltaTime) -> void
 	auto fDt = deltaTime.asSeconds();
 
 	auto& registry = g_entityManager.getRegistry();
-	auto view      = registry.view<Player, Input::InputState>();
+	auto view      = registry.view<Player, Common::Input::InputState>();
 	for (const auto entity : view)
 	{
 		auto& playerComponent = registry.get<Player>(entity);
-		auto& inputComponent  = registry.get<Input::InputState>(entity);
+		auto& inputComponent  = registry.get<Common::Input::InputState>(entity);
 
 		sf::Vector2f delta{0.0F, 0.0F};
 		if (inputComponent.forwards)

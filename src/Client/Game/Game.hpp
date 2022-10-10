@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Common/Network/ClientID.hpp"
-#include "Common/Network/Message.hpp"
 #include "Engine/State.hpp"
-#include "SFML/Graphics/Sprite.hpp"
-#include "SFML/Graphics/Texture.hpp"
-#include <unordered_map>
+#include <Common/Network/ClientID.hpp>
+#include <Common/Network/Message.hpp>
+#include <Common/Network/NetworkEntity.hpp>
+#include <SFML/Graphics/Texture.hpp>
+#include <entt/entity/registry.hpp>
 
 namespace Client::Game
 {
@@ -25,7 +25,7 @@ namespace Client::Game
 		auto parseTCP(Common::Network::Message& message) -> void;
 		auto parseUDP(Common::Network::Message& message) -> void;
 
-		std::unordered_map<Common::Network::ClientID, sf::Sprite, Common::Network::ClientIDHash> m_sprites;
+		entt::basic_registry<Common::Network::NetworkEntity> m_registry;
 		sf::Texture m_playerTexture;
 	};
 

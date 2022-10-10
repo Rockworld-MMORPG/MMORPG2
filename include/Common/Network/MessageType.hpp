@@ -21,6 +21,7 @@ namespace Common::Network
 		Movement      = 0x12,
 		Position      = 0x13,
 		Action        = 0x14,
+		InputState    = 0x15,
 	};
 
 	auto operator<<(MessageData& messageData, MessageType messageType) -> MessageData&;
