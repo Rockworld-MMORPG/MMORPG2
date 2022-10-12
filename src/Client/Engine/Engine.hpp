@@ -4,6 +4,7 @@
 #include "Input/InputManager.hpp"
 #include "Network/NetworkManager.hpp"
 #include "SFML/Graphics/RenderWindow.hpp"
+#include <discord.h>
 #include <filesystem>
 #include <memory>
 #include <stack>
@@ -30,6 +31,8 @@ namespace Client
 	private:
 		std::stack<std::unique_ptr<State>> m_stateStack;
 		bool m_shouldExit = false;
+
+		std::unique_ptr<discord::Core> m_discord;
 
 		sf::RenderWindow m_window;
 		sf::Clock m_clock;
