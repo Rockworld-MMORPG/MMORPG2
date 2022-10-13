@@ -1,5 +1,4 @@
 #include "World/TerrainTile.hpp"
-#include "World/Level.hpp"
 #include <SFML/Graphics/RenderTarget.hpp>
 
 namespace Client::World
@@ -8,16 +7,16 @@ namespace Client::World
 	const auto TILE_SCALE = 64.0F;
 
 
-	TerrainTile::TerrainTile(const Level& level)
+	TerrainTile::TerrainTile(const Common::World::Level& level)
 	{
 		m_vertexArray.setPrimitiveType(sf::PrimitiveType::Triangles);
-		m_vertexArray.resize(LEVEL_WIDTH * LEVEL_HEIGHT * 6U);
+		m_vertexArray.resize(Common::World::LEVEL_WIDTH * Common::World::LEVEL_HEIGHT * 6U);
 
-		for (auto yPos = std::size_t(0); yPos < LEVEL_HEIGHT; ++yPos)
+		for (auto yPos = std::size_t(0); yPos < Common::World::LEVEL_HEIGHT; ++yPos)
 		{
-			for (auto xPos = std::size_t(0); xPos < LEVEL_WIDTH; ++xPos)
+			for (auto xPos = std::size_t(0); xPos < Common::World::LEVEL_WIDTH; ++xPos)
 			{
-				auto index  = (xPos + yPos * LEVEL_WIDTH) * 6U;
+				auto index  = (xPos + yPos * Common::World::LEVEL_WIDTH) * 6U;
 				auto floatX = static_cast<float>(xPos);
 				auto floatY = static_cast<float>(yPos);
 

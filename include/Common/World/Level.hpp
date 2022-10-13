@@ -1,10 +1,9 @@
 #pragma once
 
-#include <SFML/Graphics/VertexArray.hpp>
+#include "Common/World/Tile.hpp"
 #include <array>
-#include <cstdint>
 
-namespace Client::World
+namespace Common::World
 {
 
 	const auto LEVEL_WIDTH  = std::size_t(256);
@@ -19,7 +18,7 @@ namespace Client::World
 		[[nodiscard]] auto getTile(std::size_t xPosition, std::size_t yPosition) const -> std::uint8_t;
 
 	private:
-		std::array<std::uint8_t, LEVEL_WIDTH * LEVEL_HEIGHT> m_data;
+		std::array<Tile, LEVEL_WIDTH * LEVEL_HEIGHT> m_data;
 	};
 
-} // namespace Client::World
+} // namespace Common::World

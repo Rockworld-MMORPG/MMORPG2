@@ -10,9 +10,9 @@ target_sources(
           Game/Game.cpp
           Input/InputManager.cpp
           Network/NetworkManager.cpp
-          World/Level.cpp
           World/TerrainTile.cpp
           World/TerrainRenderer.cpp)
+
 target_include_directories(
   client
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}

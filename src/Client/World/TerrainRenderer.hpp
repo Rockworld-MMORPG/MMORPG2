@@ -1,13 +1,15 @@
 #pragma once
 
 #include "World/TerrainTile.hpp"
+#include <Common/World/Level.hpp>
+
 namespace Client::World
 {
 
 	class TerrainRenderer
 	{
 	public:
-		auto addLevel(Level& level) -> void;
+		auto addLevel(Common::World::Level& level) -> void;
 		auto render(sf::RenderTarget& renderTarget) -> void;
 
 	private:

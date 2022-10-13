@@ -4,7 +4,7 @@
 namespace Client::World
 {
 
-	auto TerrainRenderer::addLevel(Level& level) -> void
+	auto TerrainRenderer::addLevel(Common::World::Level& level) -> void
 	{
 		m_tiles.emplace_back(level);
 	}

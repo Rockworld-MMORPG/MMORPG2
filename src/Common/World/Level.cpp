@@ -1,6 +1,6 @@
-#include "World/Level.hpp"
+#include "Common/World/Level.hpp"
 
-namespace Client::World
+namespace Common::World
 {
 
 	Level::Level() :
@@ -18,7 +18,7 @@ namespace Client::World
 			return;
 		}
 
-		m_data.at(yPosition * LEVEL_WIDTH + xPosition) = value;
+		m_data.at(yPosition * LEVEL_WIDTH + xPosition).type = value;
 	}
 
 	auto Level::getTile(const std::size_t xPosition, const std::size_t yPosition) const -> std::uint8_t
@@ -33,7 +33,7 @@ namespace Client::World
 			return -1;
 		}
 
-		return m_data.at(yPosition * LEVEL_WIDTH + xPosition);
+		return m_data.at(yPosition * LEVEL_WIDTH + xPosition).type;
 	}
 
-} // namespace Client::World
+} // namespace Common::World

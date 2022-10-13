@@ -1,7 +1,6 @@
 #include "Game/Game.hpp"
 #include "Engine/Engine.hpp"
 #include "Network/NetworkManager.hpp"
-#include "World/Level.hpp"
 #include <Common/Input/Action.hpp>
 #include <Common/Input/ActionType.hpp>
 #include <Common/Input/InputState.hpp>
@@ -42,11 +41,11 @@ namespace Client::Game
 
 		const auto& testLevel = engine.assetManager.getAsset("test_level");
 
-		for (auto yPos = 0; yPos < World::LEVEL_HEIGHT; ++yPos)
+		for (auto yPos = 0; yPos < Common::World::LEVEL_HEIGHT; ++yPos)
 		{
-			for (auto xPos = 0; xPos < World::LEVEL_WIDTH; ++xPos)
+			for (auto xPos = 0; xPos < Common::World::LEVEL_WIDTH; ++xPos)
 			{
-				m_level.setTile(xPos, yPos, testLevel.at(xPos + yPos * World::LEVEL_WIDTH));
+				m_level.setTile(xPos, yPos, testLevel.at(xPos + yPos * Common::World::LEVEL_WIDTH));
 			}
 		}
 

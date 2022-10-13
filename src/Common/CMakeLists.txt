@@ -9,7 +9,9 @@ target_sources(
           Network/MessageType.cpp
           Network/ClientID.cpp
           Input/Action.cpp
-          Input/InputState.cpp)
+          Input/InputState.cpp
+          World/Level.cpp
+          World/Tile.cpp)
 target_include_directories(
   common
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
