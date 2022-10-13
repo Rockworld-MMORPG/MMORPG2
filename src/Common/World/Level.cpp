@@ -6,7 +6,7 @@ namespace Common::World
 	Level::Level() :
 	    m_data(){};
 
-	auto Level::setTile(const std::size_t xPosition, const std::size_t yPosition, const std::uint8_t value) -> void
+	auto Level::setTile(const std::size_t xPosition, const std::size_t yPosition, const Tile tile) -> void
 	{
 		if (xPosition > LEVEL_WIDTH)
 		{
@@ -18,22 +18,22 @@ namespace Common::World
 			return;
 		}
 
-		m_data.at(yPosition * LEVEL_WIDTH + xPosition).type = value;
+		m_data.at(yPosition * LEVEL_WIDTH + xPosition) = tile;
 	}
 
-	auto Level::getTile(const std::size_t xPosition, const std::size_t yPosition) const -> std::uint8_t
+	auto Level::getTile(const std::size_t xPosition, const std::size_t yPosition) const -> Tile
 	{
 		if (xPosition > LEVEL_WIDTH)
 		{
-			return -1;
+			return {};
 		}
 
 		if (yPosition > LEVEL_HEIGHT)
 		{
-			return -1;
+			return {};
 		}
 
-		return m_data.at(yPosition * LEVEL_WIDTH + xPosition).type;
+		return m_data.at(yPosition * LEVEL_WIDTH + xPosition);
 	}
 
 } // namespace Common::World

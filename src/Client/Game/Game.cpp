@@ -8,12 +8,15 @@
 #include <Common/Network/MessageType.hpp>
 #include <Common/Network/NetworkEntity.hpp>
 #include <Common/Network/Protocol.hpp>
+#include <Common/World/Level.hpp>
+#include <Common/World/Tile.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 #include <SFML/System/Time.hpp>
 #include <SFML/System/Vector2.hpp>
 #include <SFML/Window/Event.hpp>
 #include <SFML/Window/Keyboard.hpp>
+#include <cstdint>
 #include <fstream>
 #include <spdlog/spdlog.h>
 
@@ -45,7 +48,14 @@ namespace Client::Game
 		{
 			for (auto xPos = 0; xPos < Common::World::LEVEL_WIDTH; ++xPos)
 			{
-				m_level.setTile(xPos, yPos, testLevel.at(xPos + yPos * Common::World::LEVEL_WIDTH));
+				auto tile    = Common::World::Tile();
+				tile.type[0] = static_cast<std::uint8_t>(testLevel.at(xPos + yPos * Common::World::LEVEL_WIDTH + 0));
+				tile.type[1] = static_cast<std::uint8_t>(testLevel.at(xPos + yPos * Common::World::LEVEL_WIDTH + 1));
+				tile.type[2] = static_cast<std::uint8_t>(testLevel.at(xPos + yPos * Common::World::LEVEL_WIDTH + 2));
+				tile.travelMode
+				    = static_cast<Common::World::Tile::TravelMode>(testLevel.at((xPos + yPos * Common::World::LEVEL_WIDTH) * sizeof(Common::World::Tile)) + offsetof(Common::World::Tile, travelMode));
+
+				m_level.setTile(xPos, yPos, tile);
 			}
 		}
 
