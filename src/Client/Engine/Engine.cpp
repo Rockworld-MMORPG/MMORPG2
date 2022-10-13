@@ -10,8 +10,8 @@ namespace Client
 	const auto WINDOW_WIDTH  = 1280U;
 	const auto WINDOW_HEIGHT = 720U;
 
-	Engine::Engine(std::filesystem::path assetDir) :
-	    assetDirectory(std::move(assetDir))
+	Engine::Engine(const std::filesystem::path& executableDir) :
+	    assetManager(executableDir)
 	{
 		m_window.create(sf::VideoMode(sf::Vector2u(WINDOW_WIDTH, WINDOW_HEIGHT)), "Window");
 		m_window.setVerticalSyncEnabled(true);

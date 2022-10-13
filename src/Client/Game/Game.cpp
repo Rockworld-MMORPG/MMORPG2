@@ -24,7 +24,11 @@ namespace Client::Game
 	Game::Game(Engine& engine) :
 	    State(engine)
 	{
-		auto success = m_playerTexture.loadFromFile(engine.assetDirectory / "player.png");
+		engine.assetManager.loadAsset("test_level.dat", "test_level");
+		engine.assetManager.loadAsset("player.png", "player");
+
+		const auto& player = engine.assetManager.getAsset("player");
+		auto success       = m_playerTexture.loadFromMemory(player.data(), player.size());
 		engine.networkManager.connect();
 
 		engine.inputManager.bindAction(sf::Keyboard::W, Common::Input::ActionType::MoveForward);
@@ -32,18 +36,13 @@ namespace Client::Game
 		engine.inputManager.bindAction(sf::Keyboard::S, Common::Input::ActionType::MoveBackward);
 		engine.inputManager.bindAction(sf::Keyboard::D, Common::Input::ActionType::StrafeRight);
 
-		std::ifstream reader(engine.assetDirectory / "test_level.dat", std ::ios::binary | std::ios::in | std::ios::ate);
-		auto fileLength = reader.tellg();
-		reader.seekg(std::ios::beg);
-		auto buffer = std::vector<char>();
-		buffer.resize(fileLength);
-		reader.read(buffer.data(), fileLength);
+		const auto& testLevel = engine.assetManager.getAsset("test_level");
 
 		for (auto yPos = 0; yPos < World::LEVEL_HEIGHT; ++yPos)
 		{
 			for (auto xPos = 0; xPos < World::LEVEL_WIDTH; ++xPos)
 			{
-				m_level.setTile(xPos, yPos, buffer.at(xPos + yPos * World::LEVEL_WIDTH));
+				m_level.setTile(xPos, yPos, testLevel.at(xPos + yPos * World::LEVEL_WIDTH));
 			}
 		}
 

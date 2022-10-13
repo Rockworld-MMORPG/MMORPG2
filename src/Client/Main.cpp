@@ -14,12 +14,7 @@ auto main(int /* argc */, char** argv) -> int
 
 	spdlog::info("Client version {}.{}.{}", Version::getMajor(), Version::getMinor(), Version::getPatch());
 
-	auto executablePath      = std::filesystem::path(*argv);
-	const auto executableDir = executablePath.parent_path();
-	const auto assetDir      = executableDir / "assets";
-
-
-	Engine engine(assetDir);
+	Engine engine(std::filesystem::path(*argv).parent_path());
 	engine.pushState(std::make_unique<Game::Game>(engine));
 	engine.run();
 	return 0;

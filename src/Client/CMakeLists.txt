@@ -5,10 +5,11 @@ target_sources(
   client
   PRIVATE Main.cpp
           Version.cpp
-          Network/NetworkManager.cpp
+          Assets/AssetManager.cpp
           Engine/Engine.cpp
           Game/Game.cpp
           Input/InputManager.cpp
+          Network/NetworkManager.cpp
           World/Level.cpp
           World/TerrainTile.cpp
           World/TerrainRenderer.cpp)
