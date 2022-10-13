@@ -12,11 +12,11 @@
 namespace Client::Game
 {
 
-	class Game : public State
+	class Game final : public State
 	{
 	public:
 		Game(Engine& engine);
-		virtual ~Game();
+		~Game() override;
 
 		auto parseMessages(std::vector<Common::Network::Message>& messages) -> void override;
 		auto handleEvents(sf::Event& event) -> void override;

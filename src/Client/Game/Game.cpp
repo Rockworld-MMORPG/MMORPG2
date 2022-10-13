@@ -49,7 +49,10 @@ namespace Client::Game
 		m_terrainRenderer.addLevel(m_level);
 	}
 
-	Game::~Game() = default;
+	Game::~Game()
+	{
+		engine.networkManager.disconnect();
+	}
 
 	auto Game::parseTCP(Common::Network::Message& message) -> void
 	{
