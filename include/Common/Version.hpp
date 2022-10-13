@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace Client::Version
+namespace Common::Version
 {
 
 	auto getMajor() -> std::uint32_t;
@@ -10,4 +10,4 @@ namespace Client::Version
 	auto getPatch() -> std::uint32_t;
 	auto getCommit() -> std::uint32_t;
 
-} // namespace Client::Version
+} // namespace Common::Version

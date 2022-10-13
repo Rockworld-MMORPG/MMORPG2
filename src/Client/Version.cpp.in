@@ -18,4 +18,9 @@ namespace Client::Version
 		return ${CLIENT_VERSION_PATCH} + 0;
 	}
 
+	auto getCommit() -> std::uint32_t
+	{
+		return ${CLIENT_VERSION_COMMIT} + 0;
+	}
+
 } // namespace Client::Version

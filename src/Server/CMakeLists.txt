@@ -10,6 +10,7 @@ target_include_directories(
 set(SERVER_VERSION_MAJOR 0)
 set(SERVER_VERSION_MINOR 1)
 set(SERVER_VERSION_PATCH 0)
+get_hash(SERVER_VERSION_COMMIT)
 
 set_target_properties(server PROPERTIES VERSION ${SERVER_VERSION_MAJOR}.${SERVER_VERSION_MINOR}.${SERVER_VERSION_PATCH}
                                         SOVERSION ${SERVER_VERSION_MAJOR})

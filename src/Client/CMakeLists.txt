@@ -24,6 +24,7 @@ target_compile_features(client PRIVATE cxx_std_20)
 set(CLIENT_VERSION_MAJOR 0)
 set(CLIENT_VERSION_MINOR 1)
 set(CLIENT_VERSION_PATCH 0)
+get_hash(CLIENT_VERSION_COMMIT)
 
 set_target_properties(client PROPERTIES VERSION ${CLIENT_VERSION_MAJOR}.${CLIENT_VERSION_MINOR}.${CLIENT_VERSION_PATCH}
                                         SOVERSION ${CLIENT_VERSION_MAJOR})

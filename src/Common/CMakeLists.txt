@@ -16,5 +16,13 @@ target_include_directories(
   PUBLIC ${mmorpg_SOURCE_DIR}/include)
 
 target_link_libraries(common PUBLIC SFML::Network EnTT::EnTT spdlog::spdlog)
+target_compile_features(common PRIVATE cxx_std_20)
 
-set_target_properties(common PROPERTIES VERSION 0.1.0 SOVERSION 0)
+set(COMMON_VERSION_MAJOR 0)
+set(COMMON_VERSION_MINOR 1)
+set(COMMON_VERSION_PATCH 0)
+get_hash(COMMON_VERSION_COMMIT)
+
+set_target_properties(common PROPERTIES VERSION ${COMMON_VERSION_MAJOR}.${COMMON_VERSION_MINOR}.${COMMON_VERSION_PATCH}
+                                        SOVERSION ${COMMON_VERSION_MAJOR})
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Version.cpp.in ${CMAKE_CURRENT_SOURCE_DIR}/Version.cpp)

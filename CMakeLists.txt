@@ -9,6 +9,9 @@ enable_testing()
 # Use mold to link because it's far faster
 add_link_options(-fuse-ld=mold)
 
+# Add CMake functions
+include(cmake/GetHash.cmake)
+
 # External dependencies
 add_subdirectory(external)
 
