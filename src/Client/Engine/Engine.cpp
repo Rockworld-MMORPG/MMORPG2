@@ -13,9 +13,9 @@ namespace Client
 	Engine::Engine(const std::filesystem::path& executableDir) :
 	    assetManager(executableDir)
 	{
-		m_window.create(sf::VideoMode(sf::Vector2u(WINDOW_WIDTH, WINDOW_HEIGHT)), "Window");
-		m_window.setVerticalSyncEnabled(true);
-		m_window.setKeyRepeatEnabled(false);
+		window.create(sf::VideoMode(sf::Vector2u(WINDOW_WIDTH, WINDOW_HEIGHT)), "Window");
+		window.setVerticalSyncEnabled(true);
+		window.setKeyRepeatEnabled(false);
 		m_clock.restart();
 	}
 
@@ -53,7 +53,7 @@ namespace Client
 			getState().parseMessages(inboundMessages);
 
 			auto event = sf::Event();
-			while (m_window.pollEvent(event))
+			while (window.pollEvent(event))
 			{
 				inputManager.parseEvents(event);
 				getState().handleEvents(event);
@@ -62,9 +62,9 @@ namespace Client
 			inputManager.update(deltaTime);
 			getState().update(deltaTime);
 
-			m_window.clear();
-			getState().render(m_window);
-			m_window.display();
+			window.clear();
+			getState().render(window);
+			window.display();
 		}
 	}
 

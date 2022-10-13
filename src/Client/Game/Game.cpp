@@ -27,6 +27,10 @@ namespace Client::Game
 		engine.assetManager.loadAsset("test_level.dat", "test_level");
 		engine.assetManager.loadAsset("player.png", "player");
 
+		m_camera.setCenter(sf::Vector2f(0.0F, 0.0F));
+		m_camera.setSize(static_cast<sf::Vector2f>(engine.window.getSize()));
+		engine.window.setView(m_camera);
+
 		const auto& player = engine.assetManager.getAsset("player");
 		auto success       = m_playerTexture.loadFromMemory(player.data(), player.size());
 		engine.networkManager.connect();
@@ -52,6 +56,7 @@ namespace Client::Game
 	Game::~Game()
 	{
 		engine.networkManager.disconnect();
+		engine.window.setView(engine.window.getDefaultView());
 	}
 
 	auto Game::parseTCP(Common::Network::Message& message) -> void
@@ -82,17 +87,24 @@ namespace Client::Game
 					message.data >> entity >> inputState;
 
 					auto ent = static_cast<Common::Network::NetworkEntity>(entity);
-					if (m_registry.all_of<Common::Input::InputState>(ent))
+					if (!m_registry.valid(ent))
 					{
-						auto& input = m_registry.get<Common::Input::InputState>(ent) = inputState;
+						auto data = Common::Network::MessageData();
+						data << entity;
+						engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::GetEntity, data);
+					}
+					else
+					{
+						auto& input = m_registry.emplace_or_replace<Common::Input::InputState>(ent, inputState);
 					}
 				}
 			}
 			break;
 			case Common::Network::MessageType::CreateEntity:
 			{
-				Common::Network::ClientID_t entity = -1;
-				message.data >> entity;
+				auto entity = Common::Network::ClientID_t(-1);
+				sf::Vector2f position(0.0F, 0.0F);
+				message.data >> entity >> position.x >> position.y;
 				if (entity == -1)
 				{
 					// This probably wasn't supposed to happen
@@ -112,6 +124,7 @@ namespace Client::Game
 
 					auto& sprite = m_registry.emplace<sf::Sprite>(newEntity);
 					sprite.setTexture(m_playerTexture);
+					sprite.setPosition(position);
 					m_registry.emplace<Common::Input::InputState>(newEntity);
 				}
 			}
@@ -168,7 +181,6 @@ namespace Client::Game
 			case sf::Event::Closed:
 				engine.setShouldExit(true);
 				break;
-				break;
 			case sf::Event::KeyReleased:
 			{
 				switch (event.key.code)
@@ -184,6 +196,7 @@ namespace Client::Game
 						auto data = Common::Network::MessageData();
 						engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, data);
 					}
+					break;
 					default:
 						break;
 				}
@@ -234,6 +247,12 @@ namespace Client::Game
 
 			deltaPosition *= deltaTime.asSeconds();
 			sprite.move(deltaPosition);
+
+			if (static_cast<Common::Network::ClientID_t>(entity) == engine.networkManager.getClientID().get())
+			{
+				m_camera.setCenter(sprite.getPosition());
+				engine.window.setView(m_camera);
+			}
 		}
 	}
 

@@ -26,12 +26,11 @@ namespace Client
 		AssetManager assetManager;
 		NetworkManager networkManager;
 		InputManager inputManager;
+		sf::RenderWindow window;
 
 	private:
 		std::stack<std::unique_ptr<State>> m_stateStack;
 		bool m_shouldExit = false;
-
-		sf::RenderWindow m_window;
 		sf::Clock m_clock;
 	};
 

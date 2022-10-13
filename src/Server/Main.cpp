@@ -69,10 +69,27 @@ auto parseUDPMessage(Common::Network::Message& message) -> void
 		{
 			g_playerManager.createPlayer(message.header.clientID);
 			g_entityManager.addComponent<Common::Input::InputState>(message.header.clientID);
+			auto optPlayer = g_entityManager.getComponent<Player>(message.header.clientID);
 
 			auto data = Common::Network::MessageData();
 			data << message.header.clientID;
+			optPlayer->get().serialise(data);
 			g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, data);
+		}
+		break;
+		case Common::Network::MessageType::GetEntity:
+		{
+			auto entity = Common::Network::ClientID_t(-1);
+			message.data >> entity;
+
+			auto optPlayer = g_entityManager.getComponent<Player>(Common::Network::ClientID(entity));
+			if (optPlayer.has_value())
+			{
+				auto data = Common::Network::MessageData();
+				data << entity;
+				optPlayer->get().serialise(data);
+				g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, message.header.clientID, data);
+			}
 		}
 		break;
 		case Common::Network::MessageType::Action:
@@ -174,11 +191,11 @@ auto updatePlayers(sf::Time deltaTime) -> void
 		sf::Vector2f delta{0.0F, 0.0F};
 		if (inputComponent.forwards)
 		{
-			delta.y += 200.0F * fDt;
+			delta.y -= 200.0F * fDt;
 		}
 		if (inputComponent.backwards)
 		{
-			delta.y -= 200.0F * fDt;
+			delta.y += 200.0F * fDt;
 		}
 		if (inputComponent.left)
 		{

@@ -22,6 +22,7 @@ namespace Common::Network
 		Position      = 0x13,
 		Action        = 0x14,
 		InputState    = 0x15,
+		GetEntity     = 0x16,
 	};
 
 	auto operator<<(MessageData& messageData, MessageType messageType) -> MessageData&;

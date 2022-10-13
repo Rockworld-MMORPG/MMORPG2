@@ -7,6 +7,7 @@
 #include <Common/Network/Message.hpp>
 #include <Common/Network/NetworkEntity.hpp>
 #include <SFML/Graphics/Texture.hpp>
+#include <SFML/Graphics/View.hpp>
 #include <entt/entity/registry.hpp>
 
 namespace Client::Game
@@ -29,6 +30,8 @@ namespace Client::Game
 
 		World::Level m_level;
 		World::TerrainRenderer m_terrainRenderer;
+
+		sf::View m_camera;
 
 		entt::basic_registry<Common::Network::NetworkEntity> m_registry;
 		sf::Texture m_playerTexture;
