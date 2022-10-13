@@ -49,11 +49,11 @@ namespace Client::Game
 			for (auto xPos = 0; xPos < Common::World::LEVEL_WIDTH; ++xPos)
 			{
 				auto tile    = Common::World::Tile();
-				tile.type[0] = static_cast<std::uint8_t>(testLevel.at(xPos + yPos * Common::World::LEVEL_WIDTH + 0));
-				tile.type[1] = static_cast<std::uint8_t>(testLevel.at(xPos + yPos * Common::World::LEVEL_WIDTH + 1));
-				tile.type[2] = static_cast<std::uint8_t>(testLevel.at(xPos + yPos * Common::World::LEVEL_WIDTH + 2));
+				tile.type[0] = static_cast<std::uint8_t>(testLevel.at((xPos + yPos * Common::World::LEVEL_WIDTH) * 4 + 0));
+				tile.type[1] = static_cast<std::uint8_t>(testLevel.at((xPos + yPos * Common::World::LEVEL_WIDTH) * 4 + 1));
+				tile.type[2] = static_cast<std::uint8_t>(testLevel.at((xPos + yPos * Common::World::LEVEL_WIDTH) * 4 + 2));
 				tile.travelMode
-				    = static_cast<Common::World::Tile::TravelMode>(testLevel.at((xPos + yPos * Common::World::LEVEL_WIDTH) * sizeof(Common::World::Tile)) + offsetof(Common::World::Tile, travelMode));
+				    = static_cast<Common::World::Tile::TravelMode>(testLevel.at((xPos + yPos * Common::World::LEVEL_WIDTH) * 4 + 3));
 
 				m_level.setTile(xPos, yPos, tile);
 			}

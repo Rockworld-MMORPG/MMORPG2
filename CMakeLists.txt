@@ -18,6 +18,9 @@ add_subdirectory(external)
 # Project targets
 add_subdirectory(src)
 
+# Project tools
+add_subdirectory(tools)
+
 # Tests, if we're the main project
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   add_subdirectory(tests)
