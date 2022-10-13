@@ -174,7 +174,10 @@ auto broadcastPlayerPositions() -> void
 		data << static_cast<Common::Network::ClientID_t>(entity) << input;
 	}
 
-	g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::InputState, data);
+	if (!inputView.empty())
+	{
+		g_networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::InputState, data);
+	}
 }
 
 auto updatePlayers(sf::Time deltaTime) -> void
