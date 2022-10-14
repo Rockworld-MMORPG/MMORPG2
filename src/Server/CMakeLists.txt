@@ -16,5 +16,5 @@ set_target_properties(server PROPERTIES VERSION ${SERVER_VERSION_MAJOR}.${SERVER
                                         SOVERSION ${SERVER_VERSION_MAJOR})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Version.cpp.in ${CMAKE_CURRENT_SOURCE_DIR}/Version.cpp)
 
-target_link_libraries(server PRIVATE common)
+target_link_libraries(server PRIVATE common Argon2::Argon2-Hpp)
 target_compile_features(server PRIVATE cxx_std_20)
