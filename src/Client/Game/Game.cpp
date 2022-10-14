@@ -6,7 +6,6 @@
 #include <Common/Input/InputState.hpp>
 #include <Common/Network/MessageData.hpp>
 #include <Common/Network/MessageType.hpp>
-#include <Common/Network/NetworkEntity.hpp>
 #include <Common/Network/Protocol.hpp>
 #include <Common/World/Level.hpp>
 #include <Common/World/Tile.hpp>
@@ -82,77 +81,6 @@ namespace Client::Game
 
 	auto Game::parseUDP(Common::Network::Message& message) -> void
 	{
-		switch (message.header.type)
-		{
-			case Common::Network::MessageType::InputState:
-			{
-				auto size = std::uint32_t(0);
-				message.data >> size;
-
-				for (auto i = 0; i < size; ++i)
-				{
-					auto entity     = Common::Network::ClientID_t(-1);
-					auto inputState = Common::Input::InputState();
-					message.data >> entity >> inputState;
-
-					auto ent = static_cast<Common::Network::NetworkEntity>(entity);
-					if (!m_registry.valid(ent))
-					{
-						auto data = Common::Network::MessageData();
-						data << entity;
-						engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::GetEntity, data);
-					}
-					else
-					{
-						auto& input = m_registry.emplace_or_replace<Common::Input::InputState>(ent, inputState);
-					}
-				}
-			}
-			break;
-			case Common::Network::MessageType::CreateEntity:
-			{
-				auto entity = Common::Network::ClientID_t(-1);
-				sf::Vector2f position(0.0F, 0.0F);
-				message.data >> entity >> position.x >> position.y;
-				if (entity == -1)
-				{
-					// This probably wasn't supposed to happen
-					break;
-				}
-
-				auto ent = static_cast<Common::Network::NetworkEntity>(entity);
-				if (!m_registry.valid(ent))
-				{
-					auto newEntity = m_registry.create(ent);
-					if (newEntity != ent)
-					{
-						m_registry.destroy(newEntity);
-						spdlog::warn("Failed to create entity {}", entity);
-						break;
-					}
-
-					auto& sprite = m_registry.emplace<sf::Sprite>(newEntity);
-					sprite.setTexture(m_playerTexture);
-					sprite.setPosition(position);
-					m_registry.emplace<Common::Input::InputState>(newEntity);
-				}
-			}
-			break;
-			case Common::Network::MessageType::DestroyEntity:
-			{
-				Common::Network::ClientID_t entity = -1;
-				message.data >> entity;
-				auto ent = static_cast<Common::Network::NetworkEntity>(entity);
-				if (m_registry.valid(ent))
-				{
-					m_registry.destroy(ent);
-				}
-			}
-			break;
-			default:
-				// Do nothing
-				break;
-		}
 	}
 
 	auto Game::parseMessages(std::vector<Common::Network::Message>& messages) -> void
@@ -256,12 +184,6 @@ namespace Client::Game
 
 			deltaPosition *= deltaTime.asSeconds();
 			sprite.move(deltaPosition);
-
-			if (static_cast<Common::Network::ClientID_t>(entity) == engine.networkManager.getClientID().get())
-			{
-				m_camera.setCenter(sprite.getPosition());
-				engine.window.setView(m_camera);
-			}
 		}
 	}
 

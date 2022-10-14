@@ -17,6 +17,4 @@ namespace Common::Network
 		auto unpack(std::array<std::uint8_t, MAX_MESSAGE_LENGTH>& buffer, std::size_t length) -> void;
 	};
 
-	auto operator<<(std::ostream& ostream, const Message& message) -> std::ostream&;
-
 } // namespace Common::Network

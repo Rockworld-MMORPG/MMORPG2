@@ -4,7 +4,6 @@
 #include "World/TerrainRenderer.hpp"
 #include <Common/Network/ClientID.hpp>
 #include <Common/Network/Message.hpp>
-#include <Common/Network/NetworkEntity.hpp>
 #include <Common/World/Level.hpp>
 #include <SFML/Graphics/Texture.hpp>
 #include <SFML/Graphics/View.hpp>
@@ -33,7 +32,7 @@ namespace Client::Game
 
 		sf::View m_camera;
 
-		entt::basic_registry<Common::Network::NetworkEntity> m_registry;
+		entt::registry m_registry;
 		sf::Texture m_playerTexture;
 	};
 

@@ -1,10 +1,7 @@
 #include "Network/NetworkManager.hpp"
-#include "Common/Network/ServerProperties.hpp"
-#include "ECS/EntityManager.hpp"
-#include "Network/Client.hpp"
 #include "Server/Server.hpp"
 #include <Common/Network/Message.hpp>
-#include <SFML/Network/IpAddress.hpp>
+#include <Common/Network/ServerProperties.hpp>
 #include <SFML/Network/UdpSocket.hpp>
 #include <functional>
 #include <spdlog/spdlog.h>
@@ -16,6 +13,8 @@ namespace Server
 	    Manager(server)
 	{
 	}
+
+	NetworkManager::~NetworkManager() = default;
 
 	auto NetworkManager::init() -> bool
 	{
@@ -166,14 +165,14 @@ namespace Server
 		auto iterator = m_clientList.find(clientID);
 		if (iterator == m_clientList.end())
 		{
-			spdlog::warn("Tried to find client {} but they do not exist", clientID.get());
+			spdlog::warn("Tried to find client {} but they do not exist", clientID);
 			return;
 		}
 		iterator->second.udpPort = udpPort;
 		auto identifier          = generateIdentifier(iterator->second.tcpSocket->getRemoteAddress().value(), udpPort);
 		m_clientIPMap.emplace(identifier, clientID);
-		spdlog::debug("Set client {} UDP port to {}", clientID.get(), udpPort);
-		spdlog::debug("Mapping identifier {} ({}:{}) to {}", identifier, iterator->second.tcpSocket->getRemoteAddress()->toString(), udpPort, clientID.get());
+		spdlog::debug("Set client {} UDP port to {}", clientID, udpPort);
+		spdlog::debug("Mapping identifier {} ({}:{}) to {}", identifier, iterator->second.tcpSocket->getRemoteAddress()->toString(), udpPort, clientID);
 
 		// Send the client back their client ID
 		auto data
@@ -199,12 +198,7 @@ namespace Server
 			case sf::Socket::Status::Done:
 			{
 				// Add the client to the entity manager
-				auto clientID = server.entityManager.create();
-				if (clientID.get() == -1)
-				{
-					// We can't use -1 so use something else
-					clientID = server.entityManager.create();
-				}
+				auto clientID        = m_nextClientID++;
 				auto [pair, success] = m_clientList.emplace(clientID, Client());
 
 				// Add the client's TCP socket to the selector
@@ -229,11 +223,11 @@ namespace Server
 
 	auto NetworkManager::closeConnection(Common::Network::ClientID clientID) -> void
 	{
-		spdlog::debug("Closing connection {}", clientID.get());
+		spdlog::debug("Closing connection {}", clientID);
 		auto iterator = m_clientList.find(clientID);
 		if (iterator == m_clientList.end())
 		{
-			spdlog::warn("Attempted to close connection {} but it does not exist", clientID.get());
+			spdlog::warn("Attempted to close connection {} but it does not exist", clientID);
 			return;
 		}
 

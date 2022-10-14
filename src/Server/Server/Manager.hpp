@@ -10,6 +10,7 @@ namespace Server
 	public:
 		Manager(Server& server) :
 		    server(server){};
+		virtual ~Manager() = default;
 
 		virtual auto update() -> void {}
 

@@ -1,5 +1,6 @@
 #include "Server.hpp"
-#include "Game/PlayerManager.hpp"
+#include "Common/Network/ClientID.hpp"
+#include "Game/Player.hpp"
 #include <Common/Input/Action.hpp>
 #include <Common/Input/InputState.hpp>
 #include <SFML/System/Sleep.hpp>
@@ -10,8 +11,7 @@ namespace Server
 {
 
 	Server::Server() :
-	    networkManager(*this),
-	    playerManager(*this)
+	    networkManager(*this)
 	{
 		m_clock.restart();
 		networkManager.init();
@@ -65,8 +65,13 @@ namespace Server
 			break;
 			case Common::Network::MessageType::Disconnect:
 			{
-				playerManager.destroyPlayer(message.header.clientID);
-				entityManager.destroy(message.header.clientID);
+				auto iterator = m_clientEntityMap.find(message.header.clientID);
+				if (iterator != m_clientEntityMap.end())
+				{
+					registry.destroy(iterator->second);
+					m_clientEntityMap.erase(iterator);
+				}
+
 				auto data = Common::Network::MessageData();
 				data << message.header.clientID;
 
@@ -96,29 +101,38 @@ namespace Server
 		{
 			case Common::Network::MessageType::CreateEntity:
 			{
-				playerManager.createPlayer(message.header.clientID);
-				entityManager.addComponent<Common::Input::InputState>(message.header.clientID);
-				auto optPlayer = entityManager.getComponent<Player>(message.header.clientID);
+				auto iterator = m_clientEntityMap.find(message.header.clientID);
+				if (iterator != m_clientEntityMap.end())
+				{
+					break;
+				}
+
+				auto entity = registry.create();
+				auto player = registry.emplace<Game::Player>(entity);
+				registry.emplace<Common::Input::InputState>(entity);
 
 				auto data = Common::Network::MessageData();
 				data << message.header.clientID;
-				optPlayer->get().serialise(data);
+				player.serialise(data);
 				networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, data);
 			}
 			break;
 			case Common::Network::MessageType::GetEntity:
 			{
-				auto entity = Common::Network::ClientID_t(-1);
-				message.data >> entity;
+				// auto clientID = Common::Network::ClientID(-1);
+				// message.data >> clientID;
 
-				auto optPlayer = entityManager.getComponent<Player>(Common::Network::ClientID(entity));
-				if (optPlayer.has_value())
-				{
-					auto data = Common::Network::MessageData();
-					data << entity;
-					optPlayer->get().serialise(data);
-					networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, message.header.clientID, data);
-				}
+				// auto iterator = m_clientEntityMap.find(clientID);
+				// if (!registry.all_of<Game::Player>(iterator->second))
+				// {
+				// 	break;
+				// }
+
+				// auto player = registry.get<Game::Player>(iterator->second);
+				// auto data   = Common::Network::MessageData();
+				// data << clientID;
+				// player.serialise(data);
+				// networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, message.header.clientID, data);
 			}
 			break;
 			case Common::Network::MessageType::Action:
@@ -126,42 +140,43 @@ namespace Server
 				auto action = Common::Input::Action();
 				message.data >> action;
 
+				auto iterator = m_clientEntityMap.find(message.header.clientID);
+				if (iterator == m_clientEntityMap.end())
+				{
+					break;
+				}
+
+				auto entity = iterator->second;
+				if (!registry.valid(entity))
+				{
+					break;
+				}
+				if (!registry.all_of<Common::Input::InputState>(entity))
+				{
+					break;
+				}
+
+				auto& inputState = registry.get<Common::Input::InputState>(entity);
 				switch (action.type)
 				{
 					case Common::Input::ActionType::MoveForward:
 					{
-						auto optInputState = entityManager.getComponent<Common::Input::InputState>(message.header.clientID);
-						if (optInputState.has_value())
-						{
-							optInputState->get().forwards = (action.state == Common::Input::Action::State::Begin);
-						}
+						inputState.forwards = (action.state == Common::Input::Action::State::Begin);
 					}
 					break;
 					case Common::Input::ActionType::MoveBackward:
 					{
-						auto optInputState = entityManager.getComponent<Common::Input::InputState>(message.header.clientID);
-						if (optInputState.has_value())
-						{
-							optInputState->get().backwards = (action.state == Common::Input::Action::State::Begin);
-						}
+						inputState.backwards = (action.state == Common::Input::Action::State::Begin);
 					}
 					break;
 					case Common::Input::ActionType::StrafeLeft:
 					{
-						auto optInputState = entityManager.getComponent<Common::Input::InputState>(message.header.clientID);
-						if (optInputState.has_value())
-						{
-							optInputState->get().left = (action.state == Common::Input::Action::State::Begin);
-						}
+						inputState.left = (action.state == Common::Input::Action::State::Begin);
 					}
 					break;
 					case Common::Input::ActionType::StrafeRight:
 					{
-						auto optInputState = entityManager.getComponent<Common::Input::InputState>(message.header.clientID);
-						if (optInputState.has_value())
-						{
-							optInputState->get().right = (action.state == Common::Input::Action::State::Begin);
-						}
+						inputState.right = (action.state == Common::Input::Action::State::Begin);
 					}
 					break;
 					default:
@@ -193,31 +208,16 @@ namespace Server
 
 	auto Server::broadcastPlayerPositions() -> void
 	{
-		auto data = Common::Network::MessageData();
-
-		auto inputView = entityManager.getRegistry().view<Common::Input::InputState>();
-		data << static_cast<std::uint32_t>(inputView.size());
-		for (const auto entity : inputView)
-		{
-			auto& input = entityManager.getRegistry().get<Common::Input::InputState>(entity);
-			data << static_cast<Common::Network::ClientID_t>(entity) << input;
-		}
-
-		if (!inputView.empty())
-		{
-			networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::InputState, data);
-		}
 	}
 
 	auto Server::updatePlayers(const sf::Time deltaTime) -> void
 	{
 		auto fDt = deltaTime.asSeconds();
 
-		auto& registry = entityManager.getRegistry();
-		auto view      = registry.view<Player, Common::Input::InputState>();
+		auto view = registry.view<Game::Player, Common::Input::InputState>();
 		for (const auto entity : view)
 		{
-			auto& playerComponent = registry.get<Player>(entity);
+			auto& playerComponent = registry.get<Game::Player>(entity);
 			auto& inputComponent  = registry.get<Common::Input::InputState>(entity);
 
 			sf::Vector2f delta{0.0F, 0.0F};

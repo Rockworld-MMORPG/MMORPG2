@@ -1,3 +1,4 @@
+#include "Common/Network/ClientID.hpp"
 #include "Server/Server.hpp"
 #include "Version.hpp"
 #include <spdlog/spdlog.h>

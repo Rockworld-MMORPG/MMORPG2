@@ -1,8 +1,7 @@
 add_executable(server)
 add_executable(MMORPG::Server ALIAS server)
 
-target_sources(server PRIVATE Main.cpp Server/Server.cpp ECS/EntityManager.cpp Network/NetworkManager.cpp Version.cpp
-                              Game/PlayerManager.cpp)
+target_sources(server PRIVATE Main.cpp Server/Server.cpp Network/NetworkManager.cpp Version.cpp Game/Player.cpp)
 target_include_directories(
   server
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}

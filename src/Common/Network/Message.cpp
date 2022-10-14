@@ -27,21 +27,4 @@ namespace Common::Network
 		std::memcpy(data.data(), buffer.data() + sizeof(MessageHeader), data.size());
 	}
 
-	auto operator<<(std::ostream& ostream, const Message& message) -> std::ostream&
-	{
-		const auto* val = static_cast<const std::uint8_t*>(message.data.data());
-		ostream << "--- Message ---\n";
-		ostream << fmt::format("\tHeader:\n\t\tClientID: {}\n\t\tIdentifier: {}\n\t\tProtocol: {}\n\t\tType: {:X}\n", message.header.clientID.get(), message.header.identifier, message.header.protocol == Protocol::TCP ? "TCP" : "UDP", static_cast<std::uint8_t>(message.header.type));
-		ostream << "\tData:\n\t\t";
-		for (auto i = 0; i < message.data.size(); ++i)
-		{
-			ostream << fmt::format("{:02X}", val[i]);
-			if (i % 4 == 0 && i > 0)
-			{
-				ostream << " ";
-			}
-		}
-		return ostream << "\n";
-	}
-
 } // namespace Common::Network

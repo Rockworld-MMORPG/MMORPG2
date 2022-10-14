@@ -66,10 +66,7 @@ namespace Client
 			{
 				if (message.header.type == Common::Network::MessageType::Connect)
 				{
-					Common::Network::ClientID_t clientID = -1;
-					message.data >> clientID;
-					m_clientID = Common::Network::ClientID(clientID);
-					spdlog::debug("Port requested successfully and granted client ID {}", m_clientID.get());
+					spdlog::debug("Port requested successfully");
 
 					m_socketSelector.add(m_tcpSocket);
 					m_socketSelector.add(m_udpSocket);

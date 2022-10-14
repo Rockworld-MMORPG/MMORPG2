@@ -1,11 +1,10 @@
 #pragma once
 
+#include "Common/Network/ClientID.hpp"
 #include "Network/Client.hpp"
 #include "Server/Manager.hpp"
-#include <Common/Network/ClientID.hpp>
 #include <Common/Network/Message.hpp>
 #include <Common/Network/MessageQueue.hpp>
-#include <SFML/Network/IpAddress.hpp>
 #include <SFML/Network/SocketSelector.hpp>
 #include <SFML/Network/TcpListener.hpp>
 #include <SFML/Network/UdpSocket.hpp>
@@ -18,6 +17,7 @@ namespace Server
 	{
 	public:
 		NetworkManager(Server& server);
+		~NetworkManager() override;
 
 		auto init() -> bool;
 		auto shutdown() -> void;
@@ -52,12 +52,13 @@ namespace Server
 		sf::TcpListener m_tcpListener;
 		sf::UdpSocket m_udpSocket;
 
-		std::unordered_map<Common::Network::ClientID, Client, Common::Network::ClientIDHash> m_clientList;
+		std::unordered_map<Common::Network::ClientID, Client> m_clientList;
 		std::unordered_map<std::uint64_t, Common::Network::ClientID> m_clientIPMap;
 		std::list<Common::Network::ClientID> m_clientsPendingDisconnection;
 
 		Common::Network::MessageQueue<Common::Network::Message> m_messageQueue;
 
+		Common::Network::ClientID m_nextClientID;
 		std::uint64_t m_currentMessageIdentifier = 0;
 	};
 
