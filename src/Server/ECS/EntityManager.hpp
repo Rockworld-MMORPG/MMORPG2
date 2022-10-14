@@ -79,6 +79,4 @@ namespace Server
 		entt::basic_registry<NetworkEntity> m_registry;
 	};
 
-	extern EntityManager g_entityManager;
-
 } // namespace Server

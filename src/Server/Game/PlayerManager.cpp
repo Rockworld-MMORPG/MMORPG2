@@ -1,15 +1,14 @@
 #include "Game/PlayerManager.hpp"
-#include "Common/Network/ClientID.hpp"
-#include "Common/Network/MessageData.hpp"
-#include "Common/Network/MessageType.hpp"
-#include "EntityManager.hpp"
+#include "ECS/EntityManager.hpp"
+#include "Server/Server.hpp"
+#include <Common/Network/ClientID.hpp>
+#include <Common/Network/MessageData.hpp>
+#include <Common/Network/MessageType.hpp>
 #include <SFML/Network/Packet.hpp>
 #include <functional>
 
 namespace Server
 {
-
-	PlayerManager g_playerManager;
 
 	auto Player::serialise(Common::Network::MessageData& data) -> void
 	{
@@ -21,19 +20,26 @@ namespace Server
 		data >> position.x >> position.y;
 	}
 
+	PlayerManager::PlayerManager(Server& server) :
+	    Manager(server) {}
+
 	auto PlayerManager::createPlayer(const Common::Network::ClientID clientID) -> void
 	{
-		g_entityManager.addComponent<Player>(clientID);
+		server.entityManager.addComponent<Player>(clientID);
 	}
 
 	auto PlayerManager::destroyPlayer(const Common::Network::ClientID clientID) -> void
 	{
-		g_entityManager.removeComponent<Player>(clientID);
+		server.entityManager.removeComponent<Player>(clientID);
 	}
 
 	auto PlayerManager::getPlayer(const Common::Network::ClientID clientID) -> std::optional<std::reference_wrapper<Player>>
 	{
-		return g_entityManager.getComponent<Player>(clientID);
+		return server.entityManager.getComponent<Player>(clientID);
+	}
+
+	auto PlayerManager::update() -> void
+	{
 	}
 
 } // namespace Server

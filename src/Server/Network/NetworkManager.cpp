@@ -1,24 +1,21 @@
 #include "Network/NetworkManager.hpp"
-#include "Common/Network/ClientID.hpp"
-#include "Common/Network/Message.hpp"
-#include "Common/Network/MessageData.hpp"
-#include "Common/Network/MessageHeader.hpp"
-#include "Common/Network/MessageType.hpp"
-#include "Common/Network/Protocol.hpp"
 #include "Common/Network/ServerProperties.hpp"
-#include "EntityManager.hpp"
+#include "ECS/EntityManager.hpp"
 #include "Network/Client.hpp"
-#include "SFML/Network/IpAddress.hpp"
-#include "SFML/Network/Packet.hpp"
-#include "SFML/Network/Socket.hpp"
-#include "SFML/Network/UdpSocket.hpp"
+#include "Server/Server.hpp"
+#include <Common/Network/Message.hpp>
+#include <SFML/Network/IpAddress.hpp>
+#include <SFML/Network/UdpSocket.hpp>
 #include <functional>
 #include <spdlog/spdlog.h>
 
 namespace Server
 {
 
-	NetworkManager g_networkManager;
+	NetworkManager::NetworkManager(Server& server) :
+	    Manager(server)
+	{
+	}
 
 	auto NetworkManager::init() -> bool
 	{
@@ -202,11 +199,11 @@ namespace Server
 			case sf::Socket::Status::Done:
 			{
 				// Add the client to the entity manager
-				auto clientID = g_entityManager.create();
+				auto clientID = server.entityManager.create();
 				if (clientID.get() == -1)
 				{
 					// We can't use -1 so use something else
-					clientID = g_entityManager.create();
+					clientID = server.entityManager.create();
 				}
 				auto [pair, success] = m_clientList.emplace(clientID, Client());
 
@@ -323,7 +320,6 @@ namespace Server
 
 	auto NetworkManager::receiveUDP() -> void
 	{
-		sf::Packet packet;
 		std::optional<sf::IpAddress> remoteAddress;
 		std::uint16_t remotePort = 0;
 

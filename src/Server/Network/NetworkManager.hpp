@@ -1,11 +1,10 @@
 #pragma once
 
-#include "Common/Network/MessageData.hpp"
-#include "Common/Network/MessageHeader.hpp"
+#include "Network/Client.hpp"
+#include "Server/Manager.hpp"
 #include <Common/Network/ClientID.hpp>
 #include <Common/Network/Message.hpp>
 #include <Common/Network/MessageQueue.hpp>
-#include <Common/Network/Protocol.hpp>
 #include <SFML/Network/IpAddress.hpp>
 #include <SFML/Network/SocketSelector.hpp>
 #include <SFML/Network/TcpListener.hpp>
@@ -15,15 +14,15 @@
 
 namespace Server
 {
-	struct Client;
-
-	class NetworkManager
+	class NetworkManager : public Manager
 	{
 	public:
+		NetworkManager(Server& server);
+
 		auto init() -> bool;
 		auto shutdown() -> void;
 
-		auto update() -> void;
+		auto update() -> void override;
 
 		auto getNextMessage() -> std::optional<Common::Network::Message>;
 		auto getMessages() -> std::vector<Common::Network::Message>;
@@ -61,7 +60,5 @@ namespace Server
 
 		std::uint64_t m_currentMessageIdentifier = 0;
 	};
-
-	extern NetworkManager g_networkManager;
 
 } // namespace Server
