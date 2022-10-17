@@ -60,7 +60,6 @@ namespace Client
 		{
 			sendTCP(message);
 			spdlog::debug("Awaiting successful connection ({}/{})", attemptNumber, MAX_CONNECTION_ATTEMPTS);
-			std::this_thread::sleep_for(sf::milliseconds(500).toDuration());
 			receiveTCP();
 			auto messages = m_messageQueue.clearInbound();
 			for (auto& message : messages)
@@ -188,9 +187,6 @@ namespace Client
 			case sf::Socket::Status::Done:
 				// Success
 				break;
-			default:
-				spdlog::warn("Dropped packet");
-				break;
 		}
 	}
 
@@ -204,7 +200,6 @@ namespace Client
 		auto status = m_udpSocket.receive(buffer.data(), buffer.size(), length, optAddress, remotePort);
 		if (status != sf::Socket::Status::Done)
 		{
-			spdlog::warn("Dropped packet");
 			return;
 		}
 
@@ -235,9 +230,6 @@ namespace Client
 				spdlog::warn("Client was disconnected");
 				disconnect();
 				break;
-			default:
-				spdlog::warn("Dropped packet");
-				break;
 		}
 	}
 
@@ -264,9 +256,6 @@ namespace Client
 			case sf::Socket::Status::Disconnected:
 				spdlog::warn("Client was disconnected");
 				disconnect();
-				break;
-			default:
-				spdlog::warn("Dropped packet");
 				break;
 		}
 	}

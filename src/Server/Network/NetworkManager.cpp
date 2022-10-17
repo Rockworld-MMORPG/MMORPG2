@@ -206,6 +206,7 @@ namespace Server
 				spdlog::debug("Accepted a new connection from {} as client {}", clientAddress.toString(), static_cast<std::uint32_t>(entityID));
 
 				auto data = Common::Network::MessageData();
+				data << entityID;
 				pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Connect, entityID, data);
 			}
 			break;
@@ -276,7 +277,7 @@ namespace Server
 
 	auto NetworkManager::getNextMessageIdentifier() -> std::uint64_t
 	{
-		return m_currentMessageIdentifier++;
+		return ++m_currentMessageIdentifier;
 	}
 
 	auto NetworkManager::sendUDP(Common::Network::Message& message) -> void
