@@ -22,7 +22,7 @@ namespace Server
 		auto init() -> bool;
 		auto shutdown() -> void;
 
-		auto update() -> void override;
+		auto update(sf::Time maxSelectorWaitTime) -> void;
 
 		auto getNextMessage() -> std::optional<Common::Network::Message>;
 		auto getMessages() -> std::vector<Common::Network::Message>;

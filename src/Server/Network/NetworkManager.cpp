@@ -1,5 +1,6 @@
 #include "Network/NetworkManager.hpp"
 #include "Common/Network/MessageData.hpp"
+#include "SFML/System/Time.hpp"
 #include "Server/Server.hpp"
 #include <Common/Network/Message.hpp>
 #include <Common/Network/ServerProperties.hpp>
@@ -92,7 +93,7 @@ namespace Server
 		}
 	}
 
-	auto NetworkManager::update() -> void
+	auto NetworkManager::update(const sf::Time maxSelectorWaitTime = sf::milliseconds(50)) -> void
 	{
 		// Disconnect any clients awaiting disconnection
 		disconnectClients();
@@ -112,9 +113,8 @@ namespace Server
 			}
 		}
 
-		// Wait up to MAX_SELECTOR_WAIT_TIME for a socket to be ready to receive something
-		const auto MAX_SELECTOR_WAIT_TIME = sf::milliseconds(50);
-		if (m_socketSelector.wait(MAX_SELECTOR_WAIT_TIME))
+		// Wait up to maxSelectorWaitTime for a socket to be ready to receive something
+		if (m_socketSelector.wait(maxSelectorWaitTime))
 		{
 			if (m_socketSelector.isReady(m_tcpListener))
 			{
