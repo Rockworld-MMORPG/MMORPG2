@@ -79,6 +79,12 @@ namespace Common::Network
 		return *this;
 	}
 
+	auto MessageData::operator<<(entt::entity value) -> MessageData&
+	{
+		static_assert(sizeof(std::uint32_t) == sizeof(entt::entity));
+		return operator<<(static_cast<std::uint32_t>(value));
+	}
+
 
 	auto MessageData::operator>>(bool& value) -> MessageData&
 	{
@@ -149,6 +155,20 @@ namespace Common::Network
 
 		m_readHead += packedValueCount;
 		value = *reinterpret_cast<float*>(&tempValue);
+		return *this;
+	}
+
+	auto MessageData::operator>>(entt::entity& value) -> MessageData&
+	{
+		static_assert(sizeof(std::uint32_t) == sizeof(entt::entity));
+		auto temp             = std::uint32_t(0);
+		auto packedValueCount = (sizeof(std::uint32_t) / sizeof(std::uint8_t));
+		for (auto i = 0; i < packedValueCount; ++i)
+		{
+			temp |= static_cast<std::uint32_t>(m_data.at(m_readHead + i)) << UINT8_WIDTH * i;
+		}
+		m_readHead += packedValueCount;
+		value = static_cast<entt::entity>(temp);
 		return *this;
 	}
 
