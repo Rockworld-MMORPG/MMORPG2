@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Common/Network/ClientID.hpp"
 #include "Network/NetworkManager.hpp"
 #include <SFML/System/Clock.hpp>
 #include <entt/entity/registry.hpp>
@@ -31,7 +30,6 @@ namespace Server
 		auto updatePlayers(sf::Time deltaTime) -> void;
 
 		std::vector<std::pair<sf::Time, std::unique_ptr<Manager>>> m_managers;
-		std::unordered_map<Common::Network::ClientID, entt::entity> m_clientEntityMap;
 
 		bool m_serverShouldExit = false;
 		sf::Clock m_clock;

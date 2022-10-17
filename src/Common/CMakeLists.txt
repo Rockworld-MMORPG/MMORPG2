@@ -7,7 +7,6 @@ target_sources(
           Network/Message.cpp
           Network/MessageData.cpp
           Network/MessageType.cpp
-          Network/ClientID.cpp
           Input/Action.cpp
           Input/InputState.cpp
           World/Level.cpp

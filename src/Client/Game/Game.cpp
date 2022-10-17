@@ -81,6 +81,55 @@ namespace Client::Game
 
 	auto Game::parseUDP(Common::Network::Message& message) -> void
 	{
+		switch (message.header.type)
+		{
+			case Common::Network::MessageType::CreateEntity:
+			{
+				auto entity  = m_registry.create();
+				auto& sprite = m_registry.emplace<sf::Sprite>(entity);
+				sprite.setTexture(m_playerTexture);
+
+				auto& serverID = m_registry.emplace<entt::entity>(entity);
+				message.data >> serverID;
+
+				auto& inputState = m_registry.emplace<Common::Input::InputState>(entity);
+			}
+			break;
+			case Common::Network::MessageType::InputState:
+			{
+				auto serverEntity = entt::entity();
+				message.data >> serverEntity;
+				for (const auto entity : m_registry.view<Common::Input::InputState, entt::entity>())
+				{
+					if (m_registry.get<entt::entity>(entity) != serverEntity)
+					{
+						continue;
+					}
+					auto& inputState = m_registry.get<Common::Input::InputState>(entity);
+					message.data >> inputState.forwards >> inputState.backwards >> inputState.left >> inputState.right;
+				}
+			}
+			break;
+			case Common::Network::MessageType::DestroyEntity:
+			{
+				auto serverEntity = entt::entity();
+				auto localEntity  = entt::entity(entt::null);
+				message.data >> serverEntity;
+				for (const auto entity : m_registry.view<entt::entity>())
+				{
+					if (m_registry.get<entt::entity>(entity) == serverEntity)
+					{
+						localEntity = entity;
+						break;
+					}
+				}
+				if (localEntity != entt::null)
+				{
+					m_registry.destroy(localEntity);
+				}
+			}
+			break;
+		}
 	}
 
 	auto Game::parseMessages(std::vector<Common::Network::Message>& messages) -> void
@@ -161,8 +210,14 @@ namespace Client::Game
 
 		for (const auto entity : m_registry.view<sf::Sprite, Common::Input::InputState>())
 		{
-			auto& input  = m_registry.get<Common::Input::InputState>(entity);
-			auto& sprite = m_registry.get<sf::Sprite>(entity);
+			auto& input    = m_registry.get<Common::Input::InputState>(entity);
+			auto& sprite   = m_registry.get<sf::Sprite>(entity);
+			auto& serverID = m_registry.get<entt::entity>(entity);
+
+			if (serverID == engine.networkManager.getClientID())
+			{
+				m_camera.setCenter(sprite.getPosition() + sprite.getGlobalBounds().getSize() * 0.5F);
+			}
 
 			auto deltaPosition = sf::Vector2f(0.0F, 0.0F);
 			if (input.forwards)
@@ -189,6 +244,7 @@ namespace Client::Game
 
 	auto Game::render(sf::RenderTarget& renderTarget) -> void
 	{
+		renderTarget.setView(m_camera);
 		m_terrainRenderer.render(renderTarget);
 
 		for (const auto entity : m_registry.view<sf::Sprite>())

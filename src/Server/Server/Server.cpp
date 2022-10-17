@@ -1,5 +1,7 @@
 #include "Server.hpp"
-#include "Common/Network/ClientID.hpp"
+#include "Common/Network/MessageData.hpp"
+#include "Common/Network/MessageType.hpp"
+#include "Common/Network/Protocol.hpp"
 #include "Game/Player.hpp"
 #include <Common/Input/Action.hpp>
 #include <Common/Input/InputState.hpp>
@@ -27,25 +29,17 @@ namespace Server
 		const auto MAX_UPDATES_PER_SECOND = 10;
 		const auto MIN_UPDATE_TIME        = sf::milliseconds(1000 / MAX_UPDATES_PER_SECOND);
 
-		auto networkThread = std::thread([&]() {
-			while (!m_serverShouldExit)
-			{
-				networkManager.update();
-			}
-		});
-
 		while (!m_serverShouldExit)
 		{
 			auto deltaTime = m_clock.restart();
 
+			networkManager.update();
 			parseMessages();
 			updatePlayers(deltaTime);
 			broadcastPlayerPositions();
 
 			std::this_thread::sleep_for((MIN_UPDATE_TIME - m_clock.getElapsedTime()).toDuration());
 		}
-
-		networkThread.join();
 	}
 
 	auto Server::parseTCPMessage(Common::Network::Message& message) -> void
@@ -60,25 +54,16 @@ namespace Server
 			{
 				std::uint16_t udpPort = 0;
 				message.data >> udpPort;
-				networkManager.setClientUdpPort(message.header.clientID, udpPort);
+				networkManager.setClientUdpPort(message.header.entityID, udpPort);
 			}
 			break;
 			case Common::Network::MessageType::Disconnect:
 			{
-				auto iterator = m_clientEntityMap.find(message.header.clientID);
-				if (iterator != m_clientEntityMap.end())
-				{
-					registry.destroy(iterator->second);
-					m_clientEntityMap.erase(iterator);
-				}
-
 				auto data = Common::Network::MessageData();
-				data << message.header.clientID;
-
-				networkManager.markForDisconnect(message.header.clientID);
-
+				data << message.header.entityID;
 				networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::DestroyEntity, data);
-				networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Disconnect, message.header.clientID, data);
+				networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Disconnect, message.header.entityID, data);
+				networkManager.markForDisconnect(message.header.entityID);
 			}
 			break;
 			case Common::Network::MessageType::Terminate:
@@ -101,18 +86,18 @@ namespace Server
 		{
 			case Common::Network::MessageType::CreateEntity:
 			{
-				auto iterator = m_clientEntityMap.find(message.header.clientID);
-				if (iterator != m_clientEntityMap.end())
+				if (registry.all_of<Game::Player>(message.header.entityID))
 				{
 					break;
 				}
 
-				auto entity = registry.create();
-				auto player = registry.emplace<Game::Player>(entity);
-				registry.emplace<Common::Input::InputState>(entity);
+				spdlog::debug("Creating a player for {}", static_cast<std::uint32_t>(message.header.entityID));
+
+				auto& player = registry.emplace<Game::Player>(message.header.entityID);
+				registry.emplace<Common::Input::InputState>(message.header.entityID);
 
 				auto data = Common::Network::MessageData();
-				data << message.header.clientID;
+				data << message.header.entityID;
 				player.serialise(data);
 				networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, data);
 			}
@@ -140,23 +125,13 @@ namespace Server
 				auto action = Common::Input::Action();
 				message.data >> action;
 
-				auto iterator = m_clientEntityMap.find(message.header.clientID);
-				if (iterator == m_clientEntityMap.end())
+				if (!registry.all_of<Common::Input::InputState>(message.header.entityID))
 				{
 					break;
 				}
 
-				auto entity = iterator->second;
-				if (!registry.valid(entity))
-				{
-					break;
-				}
-				if (!registry.all_of<Common::Input::InputState>(entity))
-				{
-					break;
-				}
-
-				auto& inputState = registry.get<Common::Input::InputState>(entity);
+				auto& inputState   = registry.get<Common::Input::InputState>(message.header.entityID);
+				inputState.changed = true;
 				switch (action.type)
 				{
 					case Common::Input::ActionType::MoveForward:
@@ -208,6 +183,17 @@ namespace Server
 
 	auto Server::broadcastPlayerPositions() -> void
 	{
+		for (const auto entity : registry.view<Game::Player, Common::Input::InputState>())
+		{
+			auto& inputState = registry.get<Common::Input::InputState>(entity);
+			if (inputState.changed)
+			{
+				auto data = Common::Network::MessageData();
+				data << entity << inputState;
+				networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::InputState, data);
+				inputState.changed = false;
+			}
+		}
 	}
 
 	auto Server::updatePlayers(const sf::Time deltaTime) -> void

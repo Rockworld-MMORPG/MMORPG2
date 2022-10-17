@@ -2,7 +2,6 @@
 
 #include "Engine/State.hpp"
 #include "World/TerrainRenderer.hpp"
-#include <Common/Network/ClientID.hpp>
 #include <Common/Network/Message.hpp>
 #include <Common/World/Level.hpp>
 #include <SFML/Graphics/Texture.hpp>
