@@ -1,6 +1,8 @@
 #include "Game/Game.hpp"
 #include "Engine/Engine.hpp"
 #include "Network/NetworkManager.hpp"
+#include "UI/Image.hpp"
+#include "UI/Layer.hpp"
 #include <Common/Input/Action.hpp>
 #include <Common/Input/ActionType.hpp>
 #include <Common/Input/InputState.hpp>
@@ -23,7 +25,8 @@ namespace Client::Game
 {
 
 	Game::Game(Engine& engine) :
-	    State(engine)
+	    State(engine),
+	    m_uiRenderer(engine.window)
 	{
 		engine.assetManager.loadAsset("test_level.dat", "test_level");
 		engine.assetManager.loadAsset("player.png", "player");
@@ -34,6 +37,9 @@ namespace Client::Game
 
 		const auto& player = engine.assetManager.getAsset("player");
 		auto success       = m_playerTexture.loadFromMemory(player.data(), player.size());
+
+		UI::createImage(m_registry, sf::Vector2f(50.0F, 50.0F), sf::Vector2f(32.0F, 32.0F), m_playerTexture);
+
 		engine.networkManager.connect();
 
 		engine.inputManager.bindAction(sf::Keyboard::W, Common::Input::ActionType::MoveForward);
@@ -244,10 +250,12 @@ namespace Client::Game
 
 	auto Game::render(sf::RenderTarget& renderTarget) -> void
 	{
+		m_uiRenderer.render(m_registry, renderTarget);
+
 		renderTarget.setView(m_camera);
 		m_terrainRenderer.render(renderTarget);
 
-		for (const auto entity : m_registry.view<sf::Sprite>())
+		for (const auto entity : m_registry.view<sf::Sprite>(entt::exclude<UI::Layer>))
 		{
 			renderTarget.draw(m_registry.get<sf::Sprite>(entity));
 		}

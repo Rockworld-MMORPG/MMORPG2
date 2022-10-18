@@ -10,6 +10,8 @@ target_sources(
           Game/Game.cpp
           Input/InputManager.cpp
           Network/NetworkManager.cpp
+          UI/Image.cpp
+          UI/UIRenderer.cpp
           World/TerrainTile.cpp
           World/TerrainRenderer.cpp)
 
