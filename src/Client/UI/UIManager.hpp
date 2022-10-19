@@ -8,11 +8,15 @@
 namespace Client::UI
 {
 
-	class UIRenderer
+	class UIManager
 	{
 	public:
-		UIRenderer(sf::RenderWindow& targetWindow);
+		UIManager(sf::RenderWindow& targetWindow);
+
+		auto update(sf::Time deltaTime, sf::RenderTarget& renderTarget) -> void;
 		auto render(entt::registry& registry, sf::RenderTarget& renderTarget) -> void;
+		auto removeUIElement(entt::registry& registry, const std::string& identifier) -> void;
+
 
 	private:
 		sf::View m_uiView;

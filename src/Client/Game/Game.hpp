@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Engine/State.hpp"
-#include "UI/UIRenderer.hpp"
+#include "UI/UIManager.hpp"
 #include "World/TerrainRenderer.hpp"
 #include <Common/Network/Message.hpp>
 #include <Common/World/Level.hpp>
@@ -30,7 +30,7 @@ namespace Client::Game
 		Common::World::Level m_level;
 		World::TerrainRenderer m_terrainRenderer;
 
-		UI::UIRenderer m_uiRenderer;
+		UI::UIManager m_uiManager;
 
 		sf::View m_camera;
 

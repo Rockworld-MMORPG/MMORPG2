@@ -26,7 +26,7 @@ namespace Client::Game
 
 	Game::Game(Engine& engine) :
 	    State(engine),
-	    m_uiRenderer(engine.window)
+	    m_uiManager(engine.window)
 	{
 		engine.assetManager.loadAsset("test_level.dat", "test_level");
 		engine.assetManager.loadAsset("player.png", "player");
@@ -201,6 +201,8 @@ namespace Client::Game
 
 	auto Game::update(const sf::Time deltaTime) -> void
 	{
+		m_uiManager.update(deltaTime, engine.window);
+
 		auto changedStates = engine.inputManager.getChangedStates();
 		for (const auto actionType : changedStates)
 		{
@@ -250,7 +252,7 @@ namespace Client::Game
 
 	auto Game::render(sf::RenderTarget& renderTarget) -> void
 	{
-		m_uiRenderer.render(m_registry, renderTarget);
+		m_uiManager.render(m_registry, renderTarget);
 
 		renderTarget.setView(m_camera);
 		m_terrainRenderer.render(renderTarget);
