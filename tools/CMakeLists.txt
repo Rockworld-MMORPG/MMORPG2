@@ -1,1 +1,2 @@
 add_subdirectory(LevelEditor)
+add_subdirectory(ShellClient)
