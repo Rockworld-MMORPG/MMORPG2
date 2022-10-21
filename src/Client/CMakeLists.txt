@@ -5,6 +5,7 @@ target_sources(
   client
   PRIVATE Main.cpp
           Version.cpp
+          Discord/DiscordManager.cpp
           Network/NetworkManager.cpp
           Engine/Engine.cpp
           Game/Game.cpp
