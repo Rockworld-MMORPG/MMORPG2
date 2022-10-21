@@ -3,6 +3,7 @@
 #include "Common/Network/Message.hpp"
 #include "Common/Network/MessageType.hpp"
 #include "Network/NetworkManager.hpp"
+#include "Shell/CommandShell.hpp"
 #include "entt/entity/fwd.hpp"
 #include <SFML/System/Clock.hpp>
 #include <entt/entity/registry.hpp>
@@ -31,6 +32,7 @@ namespace Server
 		auto addMessageHandler(Common::Network::MessageType messageType, MessageHandlerFunction&& handlerFunction) -> void;
 		auto clearMessageHandlers(Common::Network::MessageType messageType) -> void;
 
+		CommandShell commandShell;
 		NetworkManager networkManager;
 		entt::registry registry;
 

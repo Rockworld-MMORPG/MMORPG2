@@ -173,8 +173,14 @@ namespace Client::Game
 				{
 					case sf::Keyboard::Key::P:
 					{
-						auto data = Common::Network::MessageData();
-						engine.networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Terminate, data);
+						auto data    = Common::Network::MessageData();
+						auto command = std::string("terminate");
+						for (const auto character : command)
+						{
+							data << static_cast<std::uint8_t>(character);
+						}
+
+						engine.networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Command, data);
 					}
 					break;
 					case sf::Keyboard::Key::C:
