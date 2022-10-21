@@ -233,7 +233,10 @@ namespace Server
 		auto ipMapIterator = std::find_if(m_clientIPMap.begin(), m_clientIPMap.end(), [&](const std::pair<std::uint64_t, entt::entity> element) {
 			return element.second == entityID;
 		});
-		m_clientIPMap.erase(ipMapIterator);
+		if (ipMapIterator != m_clientIPMap.end())
+		{
+			m_clientIPMap.erase(ipMapIterator);
+		}
 
 		server.registry.destroy(entityID);
 		spdlog::debug("Connection closed successfully");
