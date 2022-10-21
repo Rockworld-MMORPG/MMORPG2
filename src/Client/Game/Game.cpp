@@ -1,8 +1,7 @@
 #include "Game/Game.hpp"
 #include "Engine/Engine.hpp"
 #include "Network/NetworkManager.hpp"
-#include "UI/Image.hpp"
-#include "UI/Layer.hpp"
+#include "UI/UI.hpp"
 #include <Common/Input/Action.hpp>
 #include <Common/Input/ActionType.hpp>
 #include <Common/Input/InputState.hpp>
@@ -25,11 +24,11 @@ namespace Client::Game
 {
 
 	Game::Game(Engine& engine) :
-	    State(engine),
-	    m_uiManager(engine.window)
+	    State(engine)
 	{
 		engine.assetManager.loadAsset("test_level.dat", "test_level");
 		engine.assetManager.loadAsset("player.png", "player");
+		engine.assetManager.loadAsset("OpenSans-Regular.ttf", "font");
 
 		m_camera.setCenter(sf::Vector2f(0.0F, 0.0F));
 		m_camera.setSize(static_cast<sf::Vector2f>(engine.window.getSize()));
@@ -38,7 +37,12 @@ namespace Client::Game
 		const auto& player = engine.assetManager.getAsset("player");
 		auto success       = m_playerTexture.loadFromMemory(player.data(), player.size());
 
-		UI::createImage(m_registry, sf::Vector2f(50.0F, 50.0F), sf::Vector2f(32.0F, 32.0F), m_playerTexture);
+		const auto& font = engine.assetManager.getAsset("font");
+		success          = m_font.loadFromMemory(font.data(), font.size());
+
+		UI::createElement(m_registry, "image_portrait", 0, UI::ImageCreateInfo{sf::Vector2f(10.0F, 10.0F), sf::Vector2f(50.0F, 50.0F), m_playerTexture});
+		UI::createElement(m_registry, "text_health", 0, UI::TextCreateInfo{sf::Vector2f(100.0F, 10.0F), m_font, "Health [ 100 / 100 ]", 20});
+		UI::createElement(m_registry, "text_power", 0, UI::TextCreateInfo{sf::Vector2f(101.0F, 35.0F), m_font, "Power [ 100 / 100 ]", 20});
 
 		engine.networkManager.connect();
 
@@ -197,11 +201,13 @@ namespace Client::Game
 			default:
 				break;
 		}
+
+		UI::handleEvents(m_registry, event);
 	}
 
 	auto Game::update(const sf::Time deltaTime) -> void
 	{
-		m_uiManager.update(deltaTime, engine.window);
+		UI::update(m_registry, deltaTime);
 
 		auto changedStates = engine.inputManager.getChangedStates();
 		for (const auto actionType : changedStates)
@@ -252,7 +258,7 @@ namespace Client::Game
 
 	auto Game::render(sf::RenderTarget& renderTarget) -> void
 	{
-		m_uiManager.render(m_registry, renderTarget);
+		m_uiRenderer.render(m_registry, renderTarget);
 
 		renderTarget.setView(m_camera);
 		m_terrainRenderer.render(renderTarget);

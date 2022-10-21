@@ -1,10 +1,11 @@
 #pragma once
 
 #include "Engine/State.hpp"
-#include "UI/UIManager.hpp"
+#include "UI/UI.hpp"
 #include "World/TerrainRenderer.hpp"
 #include <Common/Network/Message.hpp>
 #include <Common/World/Level.hpp>
+#include <SFML/Graphics/Font.hpp>
 #include <SFML/Graphics/Texture.hpp>
 #include <SFML/Graphics/View.hpp>
 #include <entt/entity/registry.hpp>
@@ -30,12 +31,13 @@ namespace Client::Game
 		Common::World::Level m_level;
 		World::TerrainRenderer m_terrainRenderer;
 
-		UI::UIManager m_uiManager;
+		UI::UIRenderer m_uiRenderer;
 
 		sf::View m_camera;
 
 		entt::registry m_registry;
 		sf::Texture m_playerTexture;
+		sf::Font m_font;
 	};
 
 } // namespace Client::Game
