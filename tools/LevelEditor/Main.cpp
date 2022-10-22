@@ -5,10 +5,26 @@
 #include <Common/World/Level.hpp>
 #include <SFML/Graphics.hpp>
 #include <fstream>
+#include <imgui-SFML.h>
+#include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/spdlog.h>
 
-auto saveLevel(const std::filesystem::path& filepath, Common::World::Level& level) -> void
+const auto MAX_CURSOR_POS_X = TILE_SCALE * Common::World::LEVEL_WIDTH;
+const auto MAX_CURSOR_POS_Y = TILE_SCALE * Common::World::LEVEL_HEIGHT;
+
+auto level = Common::World::Level();
+
+auto cursorPosition = sf::Vector2f();
+auto tilePosition   = sf::Vector2i();
+
+auto validCursorPosition() -> bool
+{
+	return (cursorPosition.x >= 0 && cursorPosition.x < MAX_CURSOR_POS_X && cursorPosition.y >= 0 && cursorPosition.y < MAX_CURSOR_POS_Y);
+}
+
+auto saveLevel(const std::filesystem::path& filepath) -> void
 {
 	auto writer = std::ofstream(filepath, std::ios::binary | std::ios::out);
 
@@ -27,11 +43,11 @@ auto saveLevel(const std::filesystem::path& filepath, Common::World::Level& leve
 	writer.close();
 }
 
-auto readLevel(const std::filesystem::path& filepath) -> Common::World::Level
+auto readLevel(const std::filesystem::path& filepath) -> void
 {
 	if (!std::filesystem::exists(filepath))
 	{
-		return {};
+		return;
 	}
 
 	auto reader   = std::ifstream(filepath, std::ios::binary | std::ios::ate | std::ios::in);
@@ -41,7 +57,7 @@ auto readLevel(const std::filesystem::path& filepath) -> Common::World::Level
 	if (fileSize != targetSize)
 	{
 		spdlog::error("File is not the right size {}B/{}B", fileSize, targetSize);
-		return {};
+		return;
 	}
 
 	auto buffer = std::array<char, targetSize>();
@@ -49,7 +65,6 @@ auto readLevel(const std::filesystem::path& filepath) -> Common::World::Level
 	reader.read(buffer.data(), fileSize);
 	reader.close();
 
-	auto level       = Common::World::Level();
 	auto bufferIndex = std::size_t(0);
 	for (auto yIndex = 0; yIndex < Common::World::LEVEL_HEIGHT; ++yIndex)
 	{
@@ -63,8 +78,33 @@ auto readLevel(const std::filesystem::path& filepath) -> Common::World::Level
 			level.setTile(xIndex, yIndex, tile);
 		}
 	}
+}
 
-	return level;
+auto showFileInfoWindow(std::filesystem::path filepath)
+{
+	static std::string filepathInput = filepath.string();
+
+	ImGui::Begin("File info");
+	ImGui::InputText("Filepath", &filepathInput);
+	if (ImGui::Button("Save"))
+	{
+		saveLevel(filepathInput);
+	}
+	if (ImGui::Button("Load"))
+	{
+		readLevel(filepathInput);
+	}
+	ImGui::End();
+}
+
+auto showTileInfoWindow()
+{
+	ImGui::Begin("Tile info");
+	ImGui::Text("X position: %i", tilePosition.x);
+	ImGui::Text("Y position: %i", tilePosition.y);
+	ImGui::Text("X position: %.2f", cursorPosition.x);
+	ImGui::Text("Y position: %.2f", cursorPosition.y);
+	ImGui::End();
 }
 
 auto main(int argc, char** argv) -> int
@@ -76,10 +116,9 @@ auto main(int argc, char** argv) -> int
 	}
 
 	auto filepath = std::filesystem::path(argv[1]);
-	auto level    = Common::World::Level();
 	if (std::filesystem::exists(filepath))
 	{
-		level = readLevel(filepath);
+		readLevel(filepath);
 	}
 
 	auto renderWindow = sf::RenderWindow();
@@ -119,38 +158,28 @@ auto main(int argc, char** argv) -> int
 	auto terrainRenderer = TerrainRenderer();
 	terrainRenderer.addLevel(level);
 
+	if (!ImGui::SFML::Init(renderWindow))
+	{
+		return 2;
+	}
+
+	sf::Clock deltaClock;
+
 	while (renderWindow.isOpen())
 	{
-		auto cursorPosition = mousePosition + (view.getCenter() - viewOffset);
-
-		auto tilePosition = static_cast<sf::Vector2i>(cursorPosition) / static_cast<std::int32_t>(TILE_SCALE);
-		tilePosition.x    = std::clamp(tilePosition.x, 0, static_cast<std::int32_t>(Common::World::LEVEL_WIDTH - 1));
-		tilePosition.y    = std::clamp(tilePosition.y, 0, static_cast<std::int32_t>(Common::World::LEVEL_HEIGHT - 1));
-
-		auto fTilePosition = static_cast<sf::Vector2f>(tilePosition);
-
-		tileSelector.setPosition(fTilePosition * TILE_SCALE);
-		positionReadout.setString(fmt::format("X: {:.2f}\tY: {:.2f}\nX: {:3}\tY:{:3}", mousePosition.x, mousePosition.y, tilePosition.x, tilePosition.y));
-
-
-		renderWindow.clear(sf::Color::Magenta);
-		// World view
-		renderWindow.setView(view);
-		terrainRenderer.render(renderWindow);
-		renderWindow.draw(tileSelector);
-
-		// UI view
-		renderWindow.setView(renderWindow.getDefaultView());
-		renderWindow.draw(positionReadout);
-		renderWindow.display();
-
 		auto event = sf::Event();
 		while (renderWindow.pollEvent(event))
 		{
+			ImGui::SFML::ProcessEvent(renderWindow, event);
+
 			switch (event.type)
 			{
 				case sf::Event::Closed:
 					renderWindow.close();
+					break;
+				case sf::Event::Resized:
+					view.setSize(static_cast<sf::Vector2f>(renderWindow.getSize()));
+					viewOffset = view.getSize() * 0.5F;
 					break;
 				case sf::Event::MouseMoved:
 				{
@@ -186,6 +215,8 @@ auto main(int argc, char** argv) -> int
 					{
 						case sf::Mouse::Button::Left:
 						{
+							if (!validCursorPosition()) { break; }
+
 							auto tile = level.getTile(tilePosition.x, tilePosition.y);
 							tile.type[0] += 25;
 							tile.type[1] += 25;
@@ -204,6 +235,8 @@ auto main(int argc, char** argv) -> int
 							break;
 						case sf::Mouse::Button::Right:
 						{
+							if (!validCursorPosition()) { break; }
+
 							auto tile       = Common::World::Tile();
 							tile.type[0]    = 0;
 							tile.type[1]    = 0;
@@ -220,36 +253,45 @@ auto main(int argc, char** argv) -> int
 					}
 				}
 				break;
-				case sf::Event::KeyReleased:
-				{
-					switch (event.key.code)
-					{
-						case sf::Keyboard::Key::S:
-							if (event.key.control)
-							{
-								spdlog::info("Saving level as {}", filepath.string());
-								saveLevel(filepath, level);
-							}
-							break;
-						case sf::Keyboard::Key::Comma:
-						{
-							renderWindow.setMouseCursorGrabbed(true);
-						}
-						break;
-						case sf::Keyboard::Key::Period:
-						{
-							renderWindow.setMouseCursorGrabbed(false);
-						}
-						break;
-						default:
-							break;
-					}
-				}
-				break;
+					break;
 				default:
 					break;
 			}
 		}
+
+		ImGui::SFML::Update(renderWindow, deltaClock.restart());
+
+		cursorPosition = mousePosition + (view.getCenter() - viewOffset);
+
+		tilePosition = sf::Vector2i(
+		                   std::clamp(cursorPosition.x, 0.0F, MAX_CURSOR_POS_X),
+		                   std::clamp(cursorPosition.y, 0.0F, MAX_CURSOR_POS_Y))
+		               / static_cast<std::int32_t>(TILE_SCALE);
+
+		auto fTilePosition = static_cast<sf::Vector2f>(tilePosition);
+
+		tileSelector.setPosition(fTilePosition * TILE_SCALE);
+
+		showFileInfoWindow(filepath);
+		showTileInfoWindow();
+
+		renderWindow.clear(sf::Color::Magenta);
+		// World view
+		renderWindow.setView(view);
+		terrainRenderer.render(renderWindow);
+
+		if (validCursorPosition())
+		{
+			renderWindow.draw(tileSelector);
+		}
+
+		// UI view
+		ImGui::SFML::Render(renderWindow);
+		renderWindow.display();
 	}
+
+	ImGui::SFML::Shutdown();
+
 	return 0;
 }
+if
