@@ -98,17 +98,11 @@ auto loadTile(std::filesystem::path filepath) -> void
 
 auto saveLevel() -> void
 {
-	auto writer = std::ofstream(currentlyLoadedLevel, std::ios::out | std::ios::binary);
+	spdlog::debug("Saving level to {}", currentlyLoadedLevel.string());
+	auto writer = std::ofstream(assetDir / currentlyLoadedLevel, std::ios::out | std::ios::binary);
 
-	for (auto yIndex = 0; yIndex < Common::World::LEVEL_HEIGHT; ++yIndex)
-	{
-		for (auto xIndex = 0; xIndex < Common::World::LEVEL_WIDTH; ++xIndex)
-		{
-			auto tile = level.getTile(xIndex, yIndex);
-			writer << tile;
-		}
-	}
-
+	auto data = level.data();
+	writer.write(data.data(), data.size());
 	writer.close();
 	spdlog::debug("Saved level");
 }
@@ -154,6 +148,7 @@ auto showFileInfoWindow() -> void
 	ImGui::InputText("Filepath", &filepathInput);
 	if (ImGui::Button("Save"))
 	{
+		currentlyLoadedLevel = filepathInput;
 		saveLevel();
 	}
 	if (ImGui::Button("Load"))
@@ -178,20 +173,24 @@ auto showTileSelectorWindow() -> void
 	ImGui::Begin("Tile palette");
 	ImGui::Text(fmt::format("Selected Tile ID: {}", selectedTile).c_str());
 	auto i = std::size_t(0);
-	for (const auto& [id, sprite] : tilePaletteMap)
+
+	for (auto& [id, sprite] : tilePaletteMap)
 	{
-		if (i % 5 == 0)
+		if (i % 4 == 0)
 		{
 			ImGui::Spacing();
 		}
-
-		ImGui::SameLine();
-		if (ImGui::ImageButton(sprite, -1, sf::Color::Transparent, (id != selectedTile) ? sf::Color(150, 150, 150) : sf::Color::White))
+		else
+		{
+			ImGui::SameLine();
+		}
+		ImGui::PushID(id);
+		if (ImGui::ImageButton(sprite))
 		{
 			spdlog::debug("Clicked {}", id);
 			selectedTile = id;
 		}
-
+		ImGui::PopID();
 		++i;
 	}
 
@@ -344,89 +343,91 @@ auto main(int argc, char** argv) -> int
 		while (renderWindow.pollEvent(event))
 		{
 			ImGui::SFML::ProcessEvent(renderWindow, event);
-
-			switch (event.type)
+			if (!ImGui::GetIO().WantCaptureMouse)
 			{
-				case sf::Event::Closed:
-					renderWindow.close();
-					break;
-				case sf::Event::Resized:
-					view.setSize(static_cast<sf::Vector2f>(renderWindow.getSize()) * viewZoomScale);
-					break;
-				case sf::Event::MouseMoved:
+				switch (event.type)
 				{
-					prevMousePosition = mousePosition;
-					mousePosition     = sf::Vector2f(event.mouseMove.x, event.mouseMove.y) * viewZoomScale;
-
-					auto delta = prevMousePosition - mousePosition;
-					if (mmbPressed)
-					{
-						view.move(delta);
-					}
-				}
-				break;
-				case sf::Event::MouseButtonPressed:
-				{
-					switch (event.mouseButton.button)
-					{
-						case sf::Mouse::Button::Left:
-							lmbPressed = true;
-							break;
-						case sf::Mouse::Button::Middle:
-							mmbPressed = true;
-							break;
-						case sf::Mouse::Button::Right:
-							rmbPressed = true;
-							break;
-						default:
-							break;
-					}
-				}
-				break;
-				case sf::Event::MouseButtonReleased:
-				{
-					switch (event.mouseButton.button)
-					{
-						case sf::Mouse::Button::Left:
-						{
-							if (!validCursorPosition()) { break; }
-
-							useTool();
-							terrainRenderer.clear();
-							terrainRenderer.addLevel(level, textureManager);
-
-							lmbPressed = false;
-						}
+					case sf::Event::Closed:
+						renderWindow.close();
 						break;
-						case sf::Mouse::Button::Middle:
-							mmbPressed = false;
-							break;
-						case sf::Mouse::Button::Right:
-						{
-							rmbPressed = false;
-						}
+					case sf::Event::Resized:
+						view.setSize(static_cast<sf::Vector2f>(renderWindow.getSize()) * viewZoomScale);
 						break;
-						default:
-							break;
-					}
-				}
-				break;
-				case sf::Event::MouseWheelScrolled:
-				{
-					auto scroll = event.mouseWheelScroll;
-					if (scroll.delta > 0.0F)
+					case sf::Event::MouseMoved:
 					{
-						viewZoomScale -= 0.1F;
+						prevMousePosition = mousePosition;
+						mousePosition     = sf::Vector2f(event.mouseMove.x, event.mouseMove.y) * viewZoomScale;
+
+						auto delta = prevMousePosition - mousePosition;
+						if (mmbPressed)
+						{
+							view.move(delta);
+						}
 					}
-					else if (scroll.delta < 0.0F)
-					{
-						viewZoomScale += 0.1F;
-					}
-					view.setSize(static_cast<sf::Vector2f>(renderWindow.getSize()) * viewZoomScale);
-				}
-				break;
-				default:
 					break;
+					case sf::Event::MouseButtonPressed:
+					{
+						switch (event.mouseButton.button)
+						{
+							case sf::Mouse::Button::Left:
+								lmbPressed = true;
+								break;
+							case sf::Mouse::Button::Middle:
+								mmbPressed = true;
+								break;
+							case sf::Mouse::Button::Right:
+								rmbPressed = true;
+								break;
+							default:
+								break;
+						}
+					}
+					break;
+					case sf::Event::MouseButtonReleased:
+					{
+						switch (event.mouseButton.button)
+						{
+							case sf::Mouse::Button::Left:
+							{
+								if (!validCursorPosition()) { break; }
+
+								useTool();
+								terrainRenderer.clear();
+								terrainRenderer.addLevel(level, textureManager);
+
+								lmbPressed = false;
+							}
+							break;
+							case sf::Mouse::Button::Middle:
+								mmbPressed = false;
+								break;
+							case sf::Mouse::Button::Right:
+							{
+								rmbPressed = false;
+							}
+							break;
+							default:
+								break;
+						}
+					}
+					break;
+					case sf::Event::MouseWheelScrolled:
+					{
+						auto scroll = event.mouseWheelScroll;
+						if (scroll.delta > 0.0F)
+						{
+							viewZoomScale -= 0.1F;
+						}
+						else if (scroll.delta < 0.0F)
+						{
+							viewZoomScale += 0.1F;
+						}
+						view.setSize(static_cast<sf::Vector2f>(renderWindow.getSize()) * viewZoomScale);
+					}
+					break;
+					default:
+						break;
+				}
 			}
 		}
 
