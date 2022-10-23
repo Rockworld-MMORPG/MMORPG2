@@ -156,6 +156,6 @@ int main(int argc, char** argv)
 	json.emplace("travel_type", static_cast<std::uint32_t>(travelMode));
 	json.emplace("texture_path", texturePath.string());
 
-	auto writer = std::ofstream(assetDir / outputName);
+	auto writer = std::ofstream(assetDir / "tiles" / outputName);
 	writer << std::setw(4) << json << std::endl;
 }
