@@ -12,5 +12,4 @@ target_link_libraries(leveleditor PRIVATE MMORPG::Common SFML::Graphics ImGui-SF
 add_custom_command(
   TARGET leveleditor
   POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy ${leveleditor_SOURCE_DIR}/OpenSans-Regular.ttf
-          $<TARGET_FILE_DIR:leveleditor>/OpenSans-Regular.ttf)
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${mmorpg_SOURCE_DIR}/assets/Client $<TARGET_FILE_DIR:leveleditor>/assets)
