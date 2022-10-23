@@ -75,7 +75,7 @@ namespace Client::Game
 		loadTile(engine.assetManager.getAsset("tile_data_grass_water_south"));
 
 		m_camera.setCenter(sf::Vector2f(0.0F, 0.0F));
-		m_camera.setSize(static_cast<sf::Vector2f>(engine.window.getSize()));
+		m_camera.setSize(sf::Vector2f(1280.0F, 720.0F));
 		engine.window.setView(m_camera);
 
 		const auto& player = engine.assetManager.getAsset("player");
@@ -199,6 +199,12 @@ namespace Client::Game
 			case sf::Event::Closed:
 				engine.setShouldExit(true);
 				break;
+			case sf::Event::Resized:
+			{
+				auto windowSize = static_cast<sf::Vector2f>(engine.window.getSize());
+				m_camera.setSize(windowSize);
+			}
+			break;
 			case sf::Event::KeyReleased:
 			{
 				switch (event.key.code)
