@@ -48,7 +48,7 @@ TerrainTile::TerrainTile(const Common::World::Level& level, const TextureManager
 
 			m_vertexArray[index + 3].texCoords = sf::Vector2f(textureCoordinates.left, textureCoordinates.top);
 			m_vertexArray[index + 4].texCoords = sf::Vector2f(textureCoordinates.left + textureCoordinates.width, textureCoordinates.top + textureCoordinates.height);
-			m_vertexArray[index + 5].texCoords = sf::Vector2f(textureCoordinates.left, textureCoordinates.top + textureCoordinates.height);
+			m_vertexArray[index + 5].texCoords = sf::Vector2f(textureCoordinates.left + textureCoordinates.width, textureCoordinates.top);
 		}
 	}
 }

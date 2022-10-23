@@ -1,10 +1,7 @@
 #include "Common/World/Tile.hpp"
-#include "SFML/Graphics/Color.hpp"
-#include "SFML/Window/ContextSettings.hpp"
 #include "TerrainRenderer.hpp"
 #include "TerrainTile.hpp"
 #include "TextureManager.hpp"
-#include "spdlog/common.h"
 #include <Common/World/Level.hpp>
 #include <SFML/Graphics.hpp>
 #include <cstdint>
@@ -62,10 +59,10 @@ auto validCursorPosition() -> bool
 
 auto loadTile(std::filesystem::path filepath) -> void
 {
-	spdlog::debug("Loading tile {}", filepath.string());
+	spdlog::debug("Attempting to load tile {}", filepath.string());
 	if (!std::filesystem::exists(assetDir / filepath))
 	{
-		spdlog::warn("Tile does not exist ({})", filepath.string());
+		spdlog::warn("Tile does not exist", filepath.string());
 		return;
 	}
 
@@ -76,7 +73,14 @@ auto loadTile(std::filesystem::path filepath) -> void
 	auto texturePath = std::filesystem::path(assetDir / json.at("texture_path"));
 
 	auto image = sf::Image();
-	image.loadFromFile(texturePath);
+	{
+		auto success = image.loadFromFile(texturePath);
+		if (!success)
+		{
+			spdlog::warn("Failed to load tile {}", filepath.string());
+			return;
+		}
+	}
 
 	textureManager.addTexture(identifier, image);
 
@@ -87,10 +91,9 @@ auto loadTile(std::filesystem::path filepath) -> void
 	sprite.setTexture(textureManager.getAtlas());
 	auto tRect = textureManager.getTextureRect(identifier);
 	auto fRect = textureManager.getTextureCoords(identifier);
-	spdlog::debug("Top: {}, Left: {}, Width: {}, Height: {}", tRect.top, tRect.left, tRect.width, tRect.height);
-	spdlog::debug("Top: {}, Left: {}, Width: {}, Height: {}", fRect.top, fRect.left, fRect.width, fRect.height);
+	spdlog::debug("Given coordinates - Top: {:0.5F}, Left: {:0.5F}, Width: {:0.5F}, Height: {:0.5F}", fRect.top, fRect.left, fRect.width, fRect.height);
 
-	sprite.setTextureRect(textureManager.getTextureRect(identifier));
+	sprite.setTextureRect(tRect);
 }
 
 auto saveLevel() -> void
@@ -301,30 +304,15 @@ auto main(int argc, char** argv) -> int
 	auto tilesDir = assetDir / "tiles";
 	for (auto file : std::filesystem::recursive_directory_iterator(tilesDir))
 	{
-		spdlog::debug("Attemtping to load {}", file.path().string());
 		if (file.path().extension() == ".json")
 		{
 			loadTile(file);
 		}
 	}
 
-	for (const auto& [id, sprite] : tilePaletteMap)
-	{
-		spdlog::debug("Loaded {}", id);
-	}
-
-	auto font = sf::Font();
-	font.loadFromFile(std::filesystem::path("OpenSans-Regular.ttf"));
-
 	auto view = sf::View();
 	view.setCenter(sf::Vector2f(0.0F, 0.0F));
 	view.setSize(sf::Vector2f(TILE_SCALE * 32, TILE_SCALE * 32));
-
-	auto positionReadout
-	    = sf::Text();
-	positionReadout.setFont(font);
-	positionReadout.setPosition(sf::Vector2f(0.0F, 0.0F));
-	positionReadout.setCharacterSize(18);
 
 	auto tileSelector = sf::RectangleShape();
 	tileSelector.setSize(sf::Vector2f(TILE_SCALE, TILE_SCALE));
@@ -390,6 +378,8 @@ auto main(int argc, char** argv) -> int
 						case sf::Mouse::Button::Right:
 							rmbPressed = true;
 							break;
+						default:
+							break;
 					}
 				}
 				break;
@@ -416,6 +406,8 @@ auto main(int argc, char** argv) -> int
 							rmbPressed = false;
 						}
 						break;
+						default:
+							break;
 					}
 				}
 				break;
@@ -461,14 +453,13 @@ auto main(int argc, char** argv) -> int
 
 		tileSelector.setOutlineThickness(1.0F / static_cast<float>(brushSize) * viewZoomScale);
 		tileSelector.setScale(sf::Vector2f(brushSize, brushSize));
-
 		tileSelector.setPosition((fTilePosition * TILE_SCALE) - sizeOffset);
 
 		showFileInfoWindow();
 		showTileInfoWindow();
 		showToolsWindow();
 
-		renderWindow.clear(sf::Color::Magenta);
+		renderWindow.clear(sf::Color::Black);
 		// World view
 		renderWindow.setView(view);
 		sf::RenderStates states = sf::RenderStates::Default;
