@@ -28,7 +28,7 @@ namespace Client::World
 				for (auto i = std::size_t(0); i < VERTICES_PER_TILE; ++i)
 				{
 					m_vertexArray[index + i].position = sf::Vector2f(floatX + xOffsets.at(i), floatY + yOffsets.at(i)) * TILE_SCALE;
-					m_vertexArray[index + i].color    = sf::Color(level.getTile(xPos, yPos).type[0], level.getTile(xPos, yPos).type[1], level.getTile(xPos, yPos).type[2]);
+					// TODO - Implement texture coords for tiles
 				}
 			}
 		}

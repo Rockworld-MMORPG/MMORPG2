@@ -7,7 +7,8 @@ add_executable(leveleditor Main.cpp TerrainRenderer.cpp TerrainTile.cpp)
 add_executable(MMORPG::LevelEditor ALIAS leveleditor)
 
 target_compile_features(leveleditor PRIVATE cxx_std_20)
-target_link_libraries(leveleditor PRIVATE MMORPG::Common SFML::Graphics ImGui-SFML::ImGui-SFML)
+target_link_libraries(leveleditor PRIVATE MMORPG::Common SFML::Graphics ImGui-SFML::ImGui-SFML
+                                          nlohmann_json::nlohmann_json)
 
 add_custom_command(
   TARGET leveleditor

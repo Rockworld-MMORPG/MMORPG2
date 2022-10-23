@@ -2,6 +2,7 @@
 
 #include "Common/World/Tile.hpp"
 #include <array>
+#include <vector>
 
 namespace Common::World
 {
@@ -13,12 +14,16 @@ namespace Common::World
 	{
 	public:
 		Level();
+		Level(const std::array<char, LEVEL_WIDTH * LEVEL_HEIGHT * sizeof(std::uint32_t)>& data);
+		Level(const std::vector<char>& data);
 
-		auto setTile(std::size_t xPosition, std::size_t yPosition, Tile value) -> void;
-		[[nodiscard]] auto getTile(std::size_t xPosition, std::size_t yPosition) const -> Tile;
+		auto setTile(std::size_t xPosition, std::size_t yPosition, std::uint32_t identifier) -> void;
+		[[nodiscard]] auto getTile(std::size_t xPosition, std::size_t yPosition) const -> std::uint32_t;
+
+		auto data() const -> std::array<char, LEVEL_WIDTH * LEVEL_HEIGHT * sizeof(std::uint32_t)>;
 
 	private:
-		std::array<Tile, LEVEL_WIDTH * LEVEL_HEIGHT> m_data;
+		std::array<std::uint32_t, LEVEL_WIDTH * LEVEL_HEIGHT> m_data;
 	};
 
 } // namespace Common::World
