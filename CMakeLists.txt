@@ -6,8 +6,12 @@ project(
 
 enable_testing()
 
-# Use mold to link because it's far faster
-add_link_options(-fuse-ld=mold)
+option(MMORPG_USE_MOLD_LINKER "Force use the mold linker instead of the system default" OFF)
+
+if(MMORPG_USE_MOLD_LINKER)
+  # Use mold to link because it's far faster
+  add_link_options(-fuse-ld=mold)
+endif()
 
 # Add CMake functions
 include(cmake/GetHash.cmake)
