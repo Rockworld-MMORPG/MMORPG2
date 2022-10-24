@@ -46,7 +46,7 @@ jobs:
       # Create the build directory
       - name: Create Build Directory
         shell: bash
-        run: mkdir '${{ github.workspace }}/build'
+        run: if [ ! -d '${{ github.workspace }}/build' ]; then mkdir '${{ github.workspace }}/build'; fi
 
       # Configure CMake
       - name: Configure CMake
