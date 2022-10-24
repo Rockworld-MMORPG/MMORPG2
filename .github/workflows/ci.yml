@@ -33,10 +33,14 @@ jobs:
           path: ${{ github.workspace }}/build/_deps
           key: ${{ runner.os }}-deps
 
+      - name: Create Build Directory
+        shell: bash
+        run: mkdir ${{ github.workspace }}/build
+
       - name: Configure CMake
         shell: bash
         run: cmake -S ${{ github.workspace }} -B ${{ github.workspace }}/build
 
       - name: Build
         shell: bash
-        run: cmake --build ${{ github.workspace }}/build --config DebugStrict
+        run: cmake --build ${{ github.workspace }}/build --config Debug
