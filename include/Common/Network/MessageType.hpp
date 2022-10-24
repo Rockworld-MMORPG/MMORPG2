@@ -13,7 +13,7 @@ namespace Common::Network
 		None       = 0x00,
 		Connect    = 0x01,
 		Disconnect = 0x02,
-		Terminate  = 0x03,
+		Command    = 0x03,
 
 		// 0x1 - Gameplay messages
 		CreateEntity  = 0x10,

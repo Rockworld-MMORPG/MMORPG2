@@ -1,47 +1,131 @@
 #include "Common/World/Tile.hpp"
-#include "SFML/Window/Keyboard.hpp"
 #include "TerrainRenderer.hpp"
 #include "TerrainTile.hpp"
+#include "TextureManager.hpp"
 #include <Common/World/Level.hpp>
 #include <SFML/Graphics.hpp>
+#include <cstdint>
+#include <filesystem>
 #include <fstream>
+#include <imgui-SFML.h>
+#include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
+#include <nlohmann/json.hpp>
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/spdlog.h>
 
-auto saveLevel(const std::filesystem::path& filepath, Common::World::Level& level) -> void
-{
-	auto writer = std::ofstream(filepath, std::ios::binary | std::ios::out);
+auto assetDir = std::filesystem::path();
 
-	for (auto yIndex = 0; yIndex < Common::World::LEVEL_HEIGHT; ++yIndex)
+const auto MAX_CURSOR_POS_X = TILE_SCALE * Common::World::LEVEL_WIDTH;
+const auto MAX_CURSOR_POS_Y = TILE_SCALE * Common::World::LEVEL_HEIGHT;
+
+auto viewZoomScale = float(1.0F);
+
+auto currentlyLoadedLevel = std::filesystem::path();
+auto level                = Common::World::Level();
+
+auto textureManager  = TextureManager();
+auto tilePaletteMap  = std::unordered_map<std::uint32_t, sf::Sprite>();
+auto terrainRenderer = TerrainRenderer();
+
+enum class Tools
+{
+	None,
+	Brush,
+	Fill
+};
+auto currentlySelectedTool = Tools::None;
+
+enum class Shape
+{
+	Circle,
+	Square
+};
+const auto MIN_BRUSH_SIZE = std::int32_t(1);
+const auto MAX_BRUSH_SIZE = std::int32_t(32);
+auto brushSize            = MIN_BRUSH_SIZE;
+auto brushShape           = Shape::Square;
+
+auto cursorPosition = sf::Vector2f();
+auto tilePosition   = sf::Vector2i();
+
+auto selectedTile = std::uint32_t(0);
+
+
+auto validCursorPosition() -> bool
+{
+	return (cursorPosition.x >= 0 && cursorPosition.x < MAX_CURSOR_POS_X && cursorPosition.y >= 0 && cursorPosition.y < MAX_CURSOR_POS_Y);
+}
+
+auto loadTile(std::filesystem::path filepath) -> void
+{
+	spdlog::debug("Attempting to load tile {}", filepath.string());
+	if (!std::filesystem::exists(assetDir / filepath))
 	{
-		for (auto xIndex = 0; xIndex < Common::World::LEVEL_WIDTH; ++xIndex)
+		spdlog::warn("Tile does not exist", filepath.string());
+		return;
+	}
+
+	auto reader = std::ifstream(assetDir / filepath);
+	auto json   = nlohmann::json::parse(reader);
+
+	auto identifier  = json.at("identifier");
+	auto texturePath = std::filesystem::path(assetDir / "textures" / (std::string(json.at("texture_path")) + ".png"));
+
+	auto image = sf::Image();
+	{
+		auto success = image.loadFromFile(texturePath);
+		if (!success)
 		{
-			auto tile = level.getTile(xIndex, yIndex);
-			writer << tile.type[0];
-			writer << tile.type[1];
-			writer << tile.type[2];
-			writer << static_cast<std::uint8_t>(tile.travelMode);
+			spdlog::warn("Failed to load tile {}", filepath.string());
+			return;
 		}
 	}
 
-	writer.close();
+	textureManager.addTexture(identifier, image);
+
+	auto [pair, success]
+	    = tilePaletteMap.emplace(identifier, sf::Sprite());
+
+	auto& sprite = pair->second;
+	sprite.setTexture(textureManager.getAtlas());
+	auto tRect = textureManager.getTextureRect(identifier);
+	auto fRect = textureManager.getTextureCoords(identifier);
+	spdlog::debug("Given coordinates - Top: {:0.5F}, Left: {:0.5F}, Width: {:0.5F}, Height: {:0.5F}", fRect.top, fRect.left, fRect.width, fRect.height);
+
+	sprite.setTextureRect(tRect);
 }
 
-auto readLevel(const std::filesystem::path& filepath) -> Common::World::Level
+auto saveLevel() -> void
 {
-	if (!std::filesystem::exists(filepath))
+	spdlog::debug("Saving level to {}", currentlyLoadedLevel.string());
+	auto writer = std::ofstream(assetDir / currentlyLoadedLevel, std::ios::out | std::ios::binary);
+
+	auto data = level.data();
+	writer.write(data.data(), data.size());
+	writer.close();
+	spdlog::debug("Saved level");
+}
+
+auto readLevel(const std::filesystem::path& filepath) -> void
+{
+	auto correctedFilepath = (filepath.is_absolute()) ? filepath : assetDir / filepath;
+	spdlog::debug("Loading {}", correctedFilepath.string());
+
+	if (!std::filesystem::exists(correctedFilepath))
 	{
-		return {};
+		spdlog::debug("File does not exist");
+		return;
 	}
 
-	auto reader   = std::ifstream(filepath, std::ios::binary | std::ios::ate | std::ios::in);
+	auto reader   = std::ifstream(correctedFilepath, std::ios::binary | std::ios::ate | std::ios::in);
 	auto fileSize = reader.tellg();
 
-	const auto targetSize = Common::World::LEVEL_WIDTH * Common::World::LEVEL_HEIGHT * sizeof(Common::World::Tile);
+	const auto targetSize = Common::World::LEVEL_WIDTH * Common::World::LEVEL_HEIGHT * sizeof(std::uint32_t);
 	if (fileSize != targetSize)
 	{
 		spdlog::error("File is not the right size {}B/{}B", fileSize, targetSize);
-		return {};
+		return;
 	}
 
 	auto buffer = std::array<char, targetSize>();
@@ -49,58 +133,185 @@ auto readLevel(const std::filesystem::path& filepath) -> Common::World::Level
 	reader.read(buffer.data(), fileSize);
 	reader.close();
 
-	auto level       = Common::World::Level();
-	auto bufferIndex = std::size_t(0);
-	for (auto yIndex = 0; yIndex < Common::World::LEVEL_HEIGHT; ++yIndex)
+	level = Common::World::Level(buffer);
+
+	currentlyLoadedLevel = correctedFilepath.relative_path();
+	terrainRenderer.clear();
+	terrainRenderer.addLevel(level, textureManager);
+}
+
+auto showFileInfoWindow() -> void
+{
+	static std::string filepathInput = currentlyLoadedLevel.relative_path().string();
+
+	ImGui::Begin("File info");
+	ImGui::InputText("Filepath", &filepathInput);
+	if (ImGui::Button("Save"))
 	{
-		for (auto xIndex = 0; xIndex < Common::World::LEVEL_WIDTH; ++xIndex)
+		currentlyLoadedLevel = filepathInput;
+		saveLevel();
+	}
+	if (ImGui::Button("Load"))
+	{
+		readLevel(filepathInput);
+	}
+	ImGui::End();
+}
+
+auto showTileInfoWindow() -> void
+{
+	ImGui::Begin("Tile info");
+	ImGui::Text("X position: %i", tilePosition.x);
+	ImGui::Text("Y position: %i", tilePosition.y);
+	ImGui::Text("X position: %.2f", cursorPosition.x);
+	ImGui::Text("Y position: %.2f", cursorPosition.y);
+	ImGui::End();
+}
+
+auto showTileSelectorWindow() -> void
+{
+	ImGui::Begin("Tile palette");
+	ImGui::Text(fmt::format("Selected Tile ID: {}", selectedTile).c_str());
+	auto i = std::size_t(0);
+
+	for (auto& [id, sprite] : tilePaletteMap)
+	{
+		if (i % 4 == 0)
 		{
-			auto tile       = Common::World::Tile();
-			tile.type[0]    = static_cast<std::uint8_t>(buffer.at(bufferIndex++));
-			tile.type[1]    = static_cast<std::uint8_t>(buffer.at(bufferIndex++));
-			tile.type[2]    = static_cast<std::uint8_t>(buffer.at(bufferIndex++));
-			tile.travelMode = static_cast<Common::World::Tile::TravelMode>(buffer.at(bufferIndex++));
-			level.setTile(xIndex, yIndex, tile);
+			ImGui::Spacing();
 		}
+		else
+		{
+			ImGui::SameLine();
+		}
+		ImGui::PushID(id);
+		if (ImGui::ImageButton(sprite))
+		{
+			spdlog::debug("Clicked {}", id);
+			selectedTile = id;
+		}
+		ImGui::PopID();
+		++i;
 	}
 
-	return level;
+	ImGui::End();
+}
+
+auto showToolsWindow() -> void
+{
+	ImGui::Begin("Tools");
+	if (ImGui::Button("None"))
+	{
+		currentlySelectedTool = Tools::None;
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button("Brush"))
+	{
+		currentlySelectedTool = Tools::Brush;
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button("Fill"))
+	{
+		currentlySelectedTool = Tools::Fill;
+	}
+
+	ImGui::Spacing();
+	switch (currentlySelectedTool)
+	{
+		case Tools::Brush:
+			ImGui::Text("Currently selected tool: Brush");
+			ImGui::SliderInt("Size", &brushSize, MIN_BRUSH_SIZE, MAX_BRUSH_SIZE);
+			showTileSelectorWindow();
+			break;
+		case Tools::Fill:
+			ImGui::Text("Currently selected tool: Fill");
+			showTileSelectorWindow();
+			break;
+		default:
+			ImGui::Text("Currently selected tool: None");
+			break;
+	}
+	ImGui::End();
+}
+
+auto useTool()
+{
+	switch (currentlySelectedTool)
+	{
+		case Tools::Brush:
+		{
+			switch (brushShape)
+			{
+				case Shape::Circle:
+
+					break;
+				case Shape::Square:
+				{
+					auto halfSize = brushSize / 2;
+					if (brushSize % 2 == 1)
+					{
+						++halfSize;
+					}
+
+					for (auto y = tilePosition.y - (brushSize / 2); y < tilePosition.y + halfSize; ++y)
+					{
+						for (auto x = tilePosition.x - (brushSize / 2); x < tilePosition.x + halfSize; ++x)
+						{
+							level.setTile(x, y, selectedTile);
+						}
+					}
+				}
+				break;
+			}
+		}
+		break;
+		case Tools::Fill:
+		{
+			auto initialTile = level.getTile(tilePosition.x, tilePosition.y);
+			for (auto y = 0; y < Common::World::LEVEL_HEIGHT; ++y)
+			{
+				for (auto x = 0; x < Common::World::LEVEL_WIDTH; ++x)
+				{
+					if (level.getTile(x, y) == initialTile)
+					{
+						level.setTile(x, y, selectedTile);
+					}
+				}
+			}
+		}
+		break;
+		default:
+			break;
+	}
 }
 
 auto main(int argc, char** argv) -> int
 {
-	if (argc != 2)
-	{
-		spdlog::error("Wrong number of parameters");
-		return 1;
-	}
+#if not defined NDEBUG
+	spdlog::set_level(spdlog::level::debug);
+#endif
 
-	auto filepath = std::filesystem::path(argv[1]);
-	auto level    = Common::World::Level();
-	if (std::filesystem::exists(filepath))
-	{
-		level = readLevel(filepath);
-	}
+	assetDir = std::filesystem::path(argv[0]).parent_path() / "assets";
 
-	auto renderWindow = sf::RenderWindow();
-	renderWindow.create(sf::VideoMode(sf::Vector2u(1280, 1280)), fmt::format("Level Editor <{}>", filepath.string()));
+	auto renderWindow    = sf::RenderWindow();
+	auto contextSettings = sf::ContextSettings{0, 0, 0, 3, 0, sf::ContextSettings::Attribute::Default, false};
+	renderWindow.create(sf::VideoMode(sf::Vector2u(1280, 1280)), "Level Editor", sf::Style::Default, contextSettings);
 	renderWindow.setVerticalSyncEnabled(true);
 
-	auto font = sf::Font();
-	font.loadFromFile(std::filesystem::path("OpenSans-Regular.ttf"));
+	auto tilesDir = assetDir / "tiles";
+	for (auto file : std::filesystem::recursive_directory_iterator(tilesDir))
+	{
+		if (file.path().extension() == ".json")
+		{
+			loadTile(file);
+		}
+	}
 
 	auto view = sf::View();
 	view.setCenter(sf::Vector2f(0.0F, 0.0F));
 	view.setSize(sf::Vector2f(TILE_SCALE * 32, TILE_SCALE * 32));
-	view.setViewport(sf::FloatRect(sf::Vector2f(0.0F, 0.0F), sf::Vector2f(1.0F, 1280.0F / std::max(renderWindow.getSize().x, renderWindow.getSize().y))));
-
-	auto viewOffset = view.getSize() * 0.5F;
-
-	auto positionReadout
-	    = sf::Text();
-	positionReadout.setFont(font);
-	positionReadout.setPosition(sf::Vector2f(0.0F, 0.0F));
-	positionReadout.setCharacterSize(18);
 
 	auto tileSelector = sf::RectangleShape();
 	tileSelector.setSize(sf::Vector2f(TILE_SCALE, TILE_SCALE));
@@ -116,140 +327,157 @@ auto main(int argc, char** argv) -> int
 	auto mmbPressed = false;
 	auto rmbPressed = false;
 
-	auto terrainRenderer = TerrainRenderer();
-	terrainRenderer.addLevel(level);
+	terrainRenderer.clear();
+	terrainRenderer.addLevel(level, textureManager);
+
+	if (!ImGui::SFML::Init(renderWindow))
+	{
+		return 2;
+	}
+
+	sf::Clock deltaClock;
 
 	while (renderWindow.isOpen())
 	{
-		auto cursorPosition = mousePosition + (view.getCenter() - viewOffset);
-
-		auto tilePosition = static_cast<sf::Vector2i>(cursorPosition) / static_cast<std::int32_t>(TILE_SCALE);
-		tilePosition.x    = std::clamp(tilePosition.x, 0, static_cast<std::int32_t>(Common::World::LEVEL_WIDTH - 1));
-		tilePosition.y    = std::clamp(tilePosition.y, 0, static_cast<std::int32_t>(Common::World::LEVEL_HEIGHT - 1));
-
-		auto fTilePosition = static_cast<sf::Vector2f>(tilePosition);
-
-		tileSelector.setPosition(fTilePosition * TILE_SCALE);
-		positionReadout.setString(fmt::format("X: {:.2f}\tY: {:.2f}\nX: {:3}\tY:{:3}", mousePosition.x, mousePosition.y, tilePosition.x, tilePosition.y));
-
-
-		renderWindow.clear(sf::Color::Magenta);
-		// World view
-		renderWindow.setView(view);
-		terrainRenderer.render(renderWindow);
-		renderWindow.draw(tileSelector);
-
-		// UI view
-		renderWindow.setView(renderWindow.getDefaultView());
-		renderWindow.draw(positionReadout);
-		renderWindow.display();
-
 		auto event = sf::Event();
 		while (renderWindow.pollEvent(event))
 		{
-			switch (event.type)
+			ImGui::SFML::ProcessEvent(renderWindow, event);
+			if (!ImGui::GetIO().WantCaptureMouse)
 			{
-				case sf::Event::Closed:
-					renderWindow.close();
+				switch (event.type)
+				{
+					case sf::Event::Closed:
+						renderWindow.close();
+						break;
+					case sf::Event::Resized:
+						view.setSize(static_cast<sf::Vector2f>(renderWindow.getSize()) * viewZoomScale);
+						break;
+					case sf::Event::MouseMoved:
+					{
+						prevMousePosition = mousePosition;
+						mousePosition     = sf::Vector2f(event.mouseMove.x, event.mouseMove.y) * viewZoomScale;
+
+						auto delta = prevMousePosition - mousePosition;
+						if (mmbPressed)
+						{
+							view.move(delta);
+						}
+					}
 					break;
-				case sf::Event::MouseMoved:
-				{
-					prevMousePosition = mousePosition;
-					mousePosition     = sf::Vector2f(event.mouseMove.x, event.mouseMove.y);
-
-					auto delta = prevMousePosition - mousePosition;
-					if (mmbPressed)
+					case sf::Event::MouseButtonPressed:
 					{
-						view.move(delta);
-					}
-				}
-				break;
-				case sf::Event::MouseButtonPressed:
-				{
-					switch (event.mouseButton.button)
-					{
-						case sf::Mouse::Button::Left:
-							lmbPressed = true;
-							break;
-						case sf::Mouse::Button::Middle:
-							mmbPressed = true;
-							break;
-						case sf::Mouse::Button::Right:
-							rmbPressed = true;
-							break;
-					}
-				}
-				break;
-				case sf::Event::MouseButtonReleased:
-				{
-					switch (event.mouseButton.button)
-					{
-						case sf::Mouse::Button::Left:
+						switch (event.mouseButton.button)
 						{
-							auto tile = level.getTile(tilePosition.x, tilePosition.y);
-							tile.type[0] += 25;
-							tile.type[1] += 25;
-							tile.type[2] += 25;
-							tile.travelMode = Common::World::Tile::TravelMode::Fly | Common::World::Tile::TravelMode::Walk;
-							level.setTile(tilePosition.x, tilePosition.y, tile);
-
-							terrainRenderer.clear();
-							terrainRenderer.addLevel(level);
-
-							lmbPressed = false;
+							case sf::Mouse::Button::Left:
+								lmbPressed = true;
+								break;
+							case sf::Mouse::Button::Middle:
+								mmbPressed = true;
+								break;
+							case sf::Mouse::Button::Right:
+								rmbPressed = true;
+								break;
+							default:
+								break;
 						}
-						break;
-						case sf::Mouse::Button::Middle:
-							mmbPressed = false;
-							break;
-						case sf::Mouse::Button::Right:
-						{
-							auto tile       = Common::World::Tile();
-							tile.type[0]    = 0;
-							tile.type[1]    = 0;
-							tile.type[2]    = 0;
-							tile.travelMode = Common::World::Tile::TravelMode::Fly | Common::World::Tile::TravelMode::Walk;
-							level.setTile(tilePosition.x, tilePosition.y, tile);
-
-							terrainRenderer.clear();
-							terrainRenderer.addLevel(level);
-
-							rmbPressed = false;
-						}
-						break;
 					}
-				}
-				break;
-				case sf::Event::KeyReleased:
-				{
-					switch (event.key.code)
+					break;
+					case sf::Event::MouseButtonReleased:
 					{
-						case sf::Keyboard::Key::S:
-							if (event.key.control)
+						switch (event.mouseButton.button)
+						{
+							case sf::Mouse::Button::Left:
 							{
-								spdlog::info("Saving level as {}", filepath.string());
-								saveLevel(filepath, level);
+								if (!validCursorPosition()) { break; }
+
+								useTool();
+								terrainRenderer.clear();
+								terrainRenderer.addLevel(level, textureManager);
+
+								lmbPressed = false;
 							}
 							break;
-						case sf::Keyboard::Key::Comma:
-						{
-							renderWindow.setMouseCursorGrabbed(true);
-						}
-						break;
-						case sf::Keyboard::Key::Period:
-						{
-							renderWindow.setMouseCursorGrabbed(false);
-						}
-						break;
-						default:
+							case sf::Mouse::Button::Middle:
+								mmbPressed = false;
+								break;
+							case sf::Mouse::Button::Right:
+							{
+								rmbPressed = false;
+							}
 							break;
+							default:
+								break;
+						}
 					}
-				}
-				break;
-				default:
 					break;
+					case sf::Event::MouseWheelScrolled:
+					{
+						auto scroll = event.mouseWheelScroll;
+						if (scroll.delta > 0.0F)
+						{
+							viewZoomScale -= 0.1F;
+						}
+						else if (scroll.delta < 0.0F)
+						{
+							viewZoomScale += 0.1F;
+						}
+						view.setSize(static_cast<sf::Vector2f>(renderWindow.getSize()) * viewZoomScale);
+					}
+					break;
+					default:
+						break;
+				}
 			}
 		}
+
+		ImGui::SFML::Update(renderWindow, deltaClock.restart());
+
+		auto viewOffset = view.getSize() * 0.5F;
+		cursorPosition  = mousePosition + (view.getCenter() - viewOffset);
+
+		tilePosition = sf::Vector2i(
+		                   std::clamp(cursorPosition.x, 0.0F, MAX_CURSOR_POS_X),
+		                   std::clamp(cursorPosition.y, 0.0F, MAX_CURSOR_POS_Y))
+		               / static_cast<std::int32_t>(TILE_SCALE);
+
+		auto fTilePosition = static_cast<sf::Vector2f>(tilePosition);
+		auto sizeOffset    = sf::Vector2f(TILE_SCALE, TILE_SCALE);
+		if (brushSize % 2 != 0)
+		{
+			sizeOffset *= static_cast<float>(brushSize - 1) * 0.5F;
+		}
+		else
+		{
+			sizeOffset *= static_cast<float>(brushSize) * 0.5F;
+		}
+
+		tileSelector.setOutlineThickness(1.0F / static_cast<float>(brushSize) * viewZoomScale);
+		tileSelector.setScale(sf::Vector2f(brushSize, brushSize));
+		tileSelector.setPosition((fTilePosition * TILE_SCALE) - sizeOffset);
+
+		showFileInfoWindow();
+		showTileInfoWindow();
+		showToolsWindow();
+
+		renderWindow.clear(sf::Color::Black);
+		// World view
+		renderWindow.setView(view);
+		sf::RenderStates states = sf::RenderStates::Default;
+		states.texture          = &textureManager.getAtlas();
+		terrainRenderer.render(renderWindow, states);
+
+		if (validCursorPosition())
+		{
+			renderWindow.draw(tileSelector);
+		}
+
+		// UI view
+		ImGui::SFML::Render(renderWindow);
+		renderWindow.display();
 	}
+
+	ImGui::SFML::Shutdown();
+
 	return 0;
 }

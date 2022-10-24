@@ -80,13 +80,10 @@ namespace Server
 		server.networkManager.markForDisconnect(message.header.entityID);
 	}
 
-	HANDLER_FN(Terminate)
+	HANDLER_FN(Command)
 	{
-		spdlog::info("Server has been sent a terminate command");
-		server.setShouldExit(true);
-
-		auto data = Common::Network::MessageData();
-		server.networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Disconnect, data);
+		auto command = std::string(static_cast<char*>(message.data.data()), message.data.size());
+		server.commandShell.parseMessage(command);
 	}
 
 	HANDLER_FN(CreateEntity)
@@ -161,10 +158,15 @@ namespace Server
 		    = Common::Network::MessageType;
 		addMessageHandler(MT::Connect, handlerConnect);
 		addMessageHandler(MT::Disconnect, handlerDisconnect);
-		addMessageHandler(MT::Terminate, handlerTerminate);
+		addMessageHandler(MT::Command, handlerCommand);
 
 		addMessageHandler(MT::CreateEntity, handlerCreateEntity);
 		addMessageHandler(MT::Action, handlerAction);
+
+		commandShell.registerCommand("terminate", [&](std::vector<std::string> tokens) {
+			m_serverShouldExit = true;
+			return;
+		});
 	}
 
 	Server::~Server()

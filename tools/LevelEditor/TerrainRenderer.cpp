@@ -1,21 +1,26 @@
 #include "TerrainRenderer.hpp"
+#include "Common/World/Level.hpp"
+#include "TerrainTile.hpp"
 #include <SFML/Graphics/RenderTarget.hpp>
 
 
-auto TerrainRenderer::addLevel(Common::World::Level& level) -> void
+auto TerrainRenderer::addLevel(Common::World::Level& level, const TextureManager& textureManager) -> void
 {
-	m_tiles.emplace_back(level);
+	update(level, textureManager);
 }
 
 auto TerrainRenderer::clear() -> void
 {
-	m_tiles.clear();
+	m_level = Common::World::Level();
 }
 
-auto TerrainRenderer::render(sf::RenderTarget& renderTarget) -> void
+auto TerrainRenderer::update(Common::World::Level& level, const TextureManager& textureManager) -> void
 {
-	for (auto& tile : m_tiles)
-	{
-		renderTarget.draw(tile);
-	}
+	m_level = level;
+	m_tile  = TerrainTile(m_level, textureManager);
+}
+
+auto TerrainRenderer::render(sf::RenderTarget& renderTarget, const sf::RenderStates& renderStates) -> void
+{
+	renderTarget.draw(m_tile, renderStates);
 }

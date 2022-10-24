@@ -16,34 +16,31 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - {
-            name: "Windows (MSVC)",
-            os: windows-latest,
-          }
-          - {
-            name: "Ubuntu (GCC)",
-            os: ubuntu-latest,
-          }
-
+          - { name: "Windows (MSVC)", os: windows-latest }
+          - { name: "Ubuntu (GCC)", os: ubuntu-latest }
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
-    - name: Install Dependencies
-      if: runner.os == 'Linux'
-      run: sudo apt-get update && sudo apt-get install libxrandr-dev libxcursor-dev libudev-dev libopenal-dev libflac-dev libvorbis-dev libgl1-mesa-dev libegl1-mesa-dev libdrm-dev libgbm-dev
+      - name: Install Dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install mold libxrandr-dev libxcursor-dev libudev-dev libopenal-dev libflac-dev libvorbis-dev libgl1-mesa-dev libegl1-mesa-dev libdrm-dev libgbm-dev
 
-    - name: Cache CMake Dependencies
-      uses: actions/cache@v3
-      with:
-        path: ${{ github.workspace }}/build/_deps
-        key: ${{ runner.os }}-deps
+      - name: Cache CMake Dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ github.workspace }}/build/_deps
+          key: ${{ runner.os }}-deps
 
-    - name: Configure CMake
-      shell: bash
-      run: cmake -S ${{ github.workspace }} -B ${{ github.workspace }}/build
+      - name: Create Build Directory
+        shell: bash
+        run: mkdir ${{ github.workspace }}/build
 
-    - name: Build
-      shell: bash
-      run: cmake --build ${{ github.workspace }}/build --config DebugStrict
+      - name: Configure CMake
+        shell: bash
+        run: cmake -S ${{ github.workspace }} -B ${{ github.workspace }}/build
+
+      - name: Build
+        shell: bash
+        run: cmake --build ${{ github.workspace }}/build --config Debug
