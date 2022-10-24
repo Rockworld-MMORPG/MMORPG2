@@ -12,7 +12,25 @@
 namespace Client::UI
 {
 
-	using Layer = std::uint8_t;
+	using Layer = std::int16_t;
+
+	struct ElementData
+	{
+		bool mouseOver = false;
+		Layer layer    = 0;
+		entt::hashed_string identifier;
+		std::vector<entt::entity> children;
+		sf::Drawable* drawable = nullptr;
+		sf::FloatRect collider;
+	};
+
+	struct ElementCallbacks
+	{
+		std::function<void(sf::Mouse::Button)> onPress;
+		std::function<void(sf::Mouse::Button)> onRelease;
+		std::function<void()> onEnter;
+		std::function<void()> onExit;
+	};
 
 	struct ImageCreateInfo
 	{
@@ -41,7 +59,7 @@ namespace Client::UI
 	{
 		sf::Vector2f position;
 		sf::Vector2f size;
-		std::uint32_t textSize;
+		std::uint32_t textSize = 12;
 		sf::Font& font;
 	};
 
@@ -53,24 +71,6 @@ namespace Client::UI
 		sf::Font& font;
 		std::optional<std::function<void(sf::Mouse::Button)>> onPressCallback;
 		std::optional<std::function<void(sf::Mouse::Button)>> onReleaseCallback;
-	};
-
-	struct ElementData
-	{
-		bool mouseOver = false;
-		Layer layer    = 0;
-		entt::hashed_string identifier;
-		std::vector<entt::entity> children;
-		sf::Drawable* drawable = nullptr;
-		sf::FloatRect collider;
-	};
-
-	struct ElementCallbacks
-	{
-		std::function<void(sf::Mouse::Button)> onPress;
-		std::function<void(sf::Mouse::Button)> onRelease;
-		std::function<void()> onEnter;
-		std::function<void()> onExit;
 	};
 
 	struct SliderData
@@ -92,6 +92,7 @@ namespace Client::UI
 	auto createElement(entt::registry& registry, std::string identifier, Layer layer, TextCreateInfo createInfo) -> entt::entity;
 	auto createElement(entt::registry& registry, std::string identifier, Layer layer, SliderCreateInfo createInfo) -> entt::entity;
 	auto createElement(entt::registry& registry, std::string identifier, Layer layer, ButtonCreateInfo createInfo) -> entt::entity;
+	auto createElement(entt::registry& registry, std::string identifier, Layer layer, TextInputCreateInfo createInfo) -> entt::entity;
 
 	auto destroyElement(entt::registry& registry, std::string identifier) -> void;
 

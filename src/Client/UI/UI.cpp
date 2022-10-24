@@ -1,5 +1,6 @@
 #include "UI/UI.hpp"
 #include "SFML/Graphics/Drawable.hpp"
+#include "SFML/Graphics/Transform.hpp"
 #include <SFML/Graphics/CircleShape.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
@@ -43,11 +44,11 @@ namespace Client::UI
 
 		auto& sprite = registry.emplace<sf::Sprite>(entity);
 		sprite.setTexture(createInfo.texture);
-		sprite.setPosition(createInfo.position);
 
 		auto scaleX = sprite.getLocalBounds().width / createInfo.size.x;
 		auto scaleY = sprite.getLocalBounds().height / createInfo.size.y;
 		sprite.setScale(sf::Vector2f(scaleX, scaleY));
+		sprite.setPosition(createInfo.position);
 
 		auto& data    = registry.get<ElementData>(entity);
 		data.drawable = &sprite;
@@ -63,8 +64,8 @@ namespace Client::UI
 		auto& text = registry.emplace<sf::Text>(entity);
 		text.setFont(createInfo.font);
 		text.setCharacterSize(createInfo.fontSize);
-		text.setPosition(createInfo.position);
 		text.setString(createInfo.string);
+		text.setPosition(createInfo.position);
 
 		auto& data    = registry.get<ElementData>(entity);
 		data.drawable = &text;
@@ -78,9 +79,9 @@ namespace Client::UI
 
 		auto& background = registry.emplace<sf::RectangleShape>(entity);
 		background.setSize(createInfo.size);
-		background.setPosition(createInfo.position);
 		background.setFillColor(sf::Color::White);
 		background.setOutlineColor(sf::Color::Black);
+		background.setPosition(createInfo.position);
 
 		auto& bgData    = registry.get<ElementData>(entity);
 		bgData.drawable = &background;
@@ -90,9 +91,9 @@ namespace Client::UI
 
 		auto& handle = registry.emplace<sf::CircleShape>(bgData.children.front());
 		handle.setRadius(createInfo.size.y * 0.5F);
-		handle.setPosition(createInfo.position + sf::Vector2f(0.0F, createInfo.size.y * 0.5F));
 		handle.setFillColor(sf::Color::White);
 		handle.setOutlineColor(sf::Color::Black);
+		handle.setPosition(createInfo.position + sf::Vector2f(-handle.getRadius(), 0.0F));
 
 		auto& handleData    = registry.get<ElementData>(bgData.children.front());
 		handleData.drawable = &handle;
@@ -106,10 +107,10 @@ namespace Client::UI
 		auto entity = createElement(registry, identifier, layer);
 
 		auto& rect = registry.emplace<sf::RectangleShape>(entity);
-		rect.setPosition(createInfo.position);
 		rect.setSize(createInfo.size);
 		rect.setFillColor(sf::Color::White);
 		rect.setOutlineColor(sf::Color::Black);
+		rect.setPosition(createInfo.position);
 
 		auto& data    = registry.get<ElementData>(entity);
 		data.drawable = &rect;
@@ -126,14 +127,54 @@ namespace Client::UI
 			callbacks.onRelease = *createInfo.onReleaseCallback;
 		}
 
-		data.children.emplace_back(createElement(registry, identifier + "_text", layer + 1, TextCreateInfo{createInfo.position, createInfo.font, createInfo.text, static_cast<uint32_t>(createInfo.size.y - 2.0F)}));
+		data.children.emplace_back(createElement(registry, identifier + "_text", layer + 1, TextCreateInfo{createInfo.position, createInfo.font, createInfo.text, static_cast<uint32_t>(createInfo.size.y)}));
 		auto& text = registry.get<sf::Text>(data.children.front());
 		text.setFillColor(sf::Color::Black);
 		while (text.getGlobalBounds().width > rect.getGlobalBounds().width * 0.9F || text.getGlobalBounds().height > rect.getGlobalBounds().height * 0.9F)
 		{
 			text.setCharacterSize(text.getCharacterSize() - 1);
 		}
-		text.setPosition(rect.getPosition() + sf::Vector2f((rect.getGlobalBounds().width - text.getGlobalBounds().width) / 2, (rect.getGlobalBounds().height - text.getGlobalBounds().height) / 4));
+
+		text.setPosition(rect.getPosition() + sf::Vector2f((rect.getGlobalBounds().width - text.getGlobalBounds().width) / 2, (rect.getGlobalBounds().height - text.getGlobalBounds().height) / 2));
+
+		return entity;
+	}
+
+	auto createElement(entt::registry& registry, std::string identifier, Layer layer, TextInputCreateInfo createInfo) -> entt::entity
+	{
+		auto entity     = createElement(registry, identifier, layer);
+		auto& data      = registry.get<ElementData>(entity);
+		auto& callbacks = registry.get<ElementCallbacks>(entity);
+
+		auto& background = registry.emplace<sf::RectangleShape>(entity);
+		background.setSize(createInfo.size);
+		background.setFillColor(sf::Color::White);
+		background.setOutlineColor(sf::Color::Black);
+		background.setPosition(createInfo.position);
+
+		auto& inputData = registry.emplace<TextInputData>(entity);
+
+		data.drawable = &background;
+		data.collider = background.getGlobalBounds();
+
+		data.children.emplace_back(createElement(
+		    registry,
+		    identifier + "_text",
+		    layer + 1,
+		    TextCreateInfo{
+		        background.getPosition(),
+		        createInfo.font,
+		        "test",
+		        createInfo.textSize}));
+		registry.get<sf::Text>(data.children.front()).setFillColor(sf::Color::Black);
+
+		callbacks.onEnter = [&]() {
+			spdlog::debug("Became active");
+			inputData.active = true;
+		};
+		callbacks.onEnter = [&]() {
+			inputData.active = false;
+		};
 
 		return entity;
 	}
@@ -220,22 +261,36 @@ namespace Client::UI
 			{
 				for (const auto entity : registry.view<TextInputData>())
 				{
-					auto& textData = registry.get<TextInputData>(entity);
-					if (!textData.active)
+					auto& elementData = registry.get<ElementData>(entity);
+					auto& textData    = registry.get<TextInputData>(entity);
+					if (!elementData.mouseOver)
 					{
+						spdlog::debug("{} is not active", static_cast<std::uint32_t>(entity));
 						continue;
 					}
+
+					spdlog::debug("Entered key: {}", static_cast<char>(event.text.unicode));
+
+					auto& data = registry.get<ElementData>(entity);
+					auto& text = registry.get<sf::Text>(data.children.front());
 
 					switch (event.text.unicode)
 					{
 						case 8: // Backspace
-							textData.input.pop_back();
+							if (!textData.input.empty())
+							{
+								textData.input.pop_back();
+							}
+							break;
 						default:
-							if (31 < event.text.unicode < 127)
+							if ((event.text.unicode > 31) && (event.text.unicode < 127))
 							{
 								textData.input.push_back(static_cast<char>(event.text.unicode));
 							}
 					}
+
+					text.setString(textData.input);
+					spdlog::debug(textData.input);
 				}
 			}
 			break;

@@ -1,6 +1,7 @@
 #include "Game/Game.hpp"
 #include "Engine/Engine.hpp"
 #include "Network/NetworkManager.hpp"
+#include "SFML/Graphics/RenderStates.hpp"
 #include "UI/UI.hpp"
 #include <Common/Input/Action.hpp>
 #include <Common/Input/ActionType.hpp>
@@ -57,6 +58,8 @@ namespace Client::Game
 				                                                                           m_registry.destroy(entity);
 			                                                                           }
 		                                                                           }});
+
+		UI::createElement(m_registry, "test_text_input", 0, UI::TextInputCreateInfo{sf::Vector2f(10.0F, 640.0F), sf::Vector2f(250.0F, 20.0F), 16, m_font});
 
 
 		engine.inputManager.bindAction(sf::Keyboard::W, Common::Input::ActionType::MoveForward);
@@ -269,8 +272,6 @@ namespace Client::Game
 
 	auto Game::render(sf::RenderTarget& renderTarget) -> void
 	{
-		m_uiRenderer.render(m_registry, renderTarget);
-
 		renderTarget.setView(m_camera);
 		m_terrainRenderer.render(renderTarget);
 
@@ -278,6 +279,8 @@ namespace Client::Game
 		{
 			renderTarget.draw(m_registry.get<sf::Sprite>(entity));
 		}
+
+		m_uiRenderer.render(m_registry, renderTarget);
 	}
 
 } // namespace Client::Game
