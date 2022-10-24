@@ -26,8 +26,11 @@ namespace Client::Game
 		auto parseTCP(Common::Network::Message& message) -> void;
 		auto parseUDP(Common::Network::Message& message) -> void;
 
+		auto loadTile(const std::vector<char>& data) -> void;
+
 		Common::World::Level m_level;
 		World::TerrainRenderer m_terrainRenderer;
+		Graphics::TextureAtlas m_textureAtlas;
 
 		sf::View m_camera;
 

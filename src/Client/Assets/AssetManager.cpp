@@ -1,5 +1,6 @@
 #include "Assets/AssetManager.hpp"
 #include <fstream>
+#include <spdlog/spdlog.h>
 
 namespace Client
 {
@@ -15,11 +16,13 @@ namespace Client
 		auto assetLocation = m_assetDirectory / filepath;
 		if (!std::filesystem::exists(assetLocation))
 		{
+			spdlog::warn("Tried to load a file that doesn't exist ({})", filepath.string());
 			return;
 		}
 
 		if (m_assets.contains(identifier))
 		{
+			spdlog::debug("Tried to load a file but the identifier is already in use ({})", identifier);
 			return;
 		}
 
@@ -43,6 +46,7 @@ namespace Client
 	{
 		if (!m_assets.contains(identifier))
 		{
+			spdlog::warn("Tried to get asset {} but it does not exist", identifier);
 			return m_assets.at("error");
 		}
 		return m_assets.at(identifier);

@@ -1,5 +1,5 @@
 {
     "identifier": 4104617381,
-    "texture_path": "textures/tile_grass_water_north.png",
+    "texture_path": "tile_grass_water_north",
     "travel_type": 0
 }

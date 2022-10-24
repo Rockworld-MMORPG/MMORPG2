@@ -1,4 +1,5 @@
 #include "Common/World/Level.hpp"
+#include <spdlog/spdlog.h>
 
 namespace Common::World
 {
@@ -9,19 +10,14 @@ namespace Common::World
 	Level::Level(const std::vector<char>& data) :
 	    m_data()
 	{
-		if (data.size() != LEVEL_WIDTH * LEVEL_HEIGHT * sizeof(std::uint8_t))
+		const auto TARGET_SIZE = LEVEL_WIDTH * LEVEL_HEIGHT * sizeof(std::uint32_t);
+		if (data.size() != TARGET_SIZE)
 		{
+			spdlog::warn("Tried to create a level but the provided data is not the right size ({} / {}B)", data.size(), TARGET_SIZE);
 			return;
 		}
 
-		auto index = std::size_t(0);
-		for (auto& tile : m_data)
-		{
-			tile |= static_cast<std::uint32_t>(data.at(index++)) << UINT8_WIDTH * 0;
-			tile |= static_cast<std::uint32_t>(data.at(index++)) << UINT8_WIDTH * 1;
-			tile |= static_cast<std::uint32_t>(data.at(index++)) << UINT8_WIDTH * 2;
-			tile |= static_cast<std::uint32_t>(data.at(index++)) << UINT8_WIDTH * 3;
-		}
+		std::memcpy(m_data.data(), data.data(), m_data.size() * sizeof(std::uint32_t));
 	}
 
 	Level::Level(const std::array<char, LEVEL_WIDTH * LEVEL_HEIGHT * sizeof(std::uint32_t)>& data)

@@ -1,5 +1,5 @@
 {
     "identifier": 1976966670,
-    "texture_path": "textures/tile_water_centre.png",
+    "texture_path": "tile_water_centre",
     "travel_type": 0
 }

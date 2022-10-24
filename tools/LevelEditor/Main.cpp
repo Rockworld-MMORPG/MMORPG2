@@ -70,7 +70,7 @@ auto loadTile(std::filesystem::path filepath) -> void
 	auto json   = nlohmann::json::parse(reader);
 
 	auto identifier  = json.at("identifier");
-	auto texturePath = std::filesystem::path(assetDir / json.at("texture_path"));
+	auto texturePath = std::filesystem::path(assetDir / "textures" / (std::string(json.at("texture_path")) + ".png"));
 
 	auto image = sf::Image();
 	{
