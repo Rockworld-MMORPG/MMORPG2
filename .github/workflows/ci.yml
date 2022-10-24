@@ -51,7 +51,7 @@ jobs:
       # Configure CMake
       - name: Configure CMake
         shell: bash
-        run: cmake -S '${{ github.workspace }}'' -B '${{ github.workspace }}/build'
+        run: cmake -S '${{ github.workspace }}' -B '${{ github.workspace }}/build'
 
       # Build the project
       - name: Build
