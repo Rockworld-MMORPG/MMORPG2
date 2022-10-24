@@ -8,6 +8,7 @@ target_sources(
           Assets/AssetManager.cpp
           Engine/Engine.cpp
           Game/Game.cpp
+          Graphics/TextureAtlas.cpp
           Input/InputManager.cpp
           Network/NetworkManager.cpp
           World/TerrainTile.cpp
@@ -18,7 +19,7 @@ target_include_directories(
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PUBLIC ${mmorpg_SOURCE_DIR}/include)
 
-target_link_libraries(client PRIVATE common SFML::Graphics SFML::Audio)
+target_link_libraries(client PRIVATE common SFML::Graphics SFML::Audio nlohmann_json::nlohmann_json)
 target_compile_features(client PRIVATE cxx_std_20)
 
 set(CLIENT_VERSION_MAJOR 0)

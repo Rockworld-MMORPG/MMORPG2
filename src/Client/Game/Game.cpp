@@ -1,5 +1,6 @@
 #include "Game/Game.hpp"
 #include "Engine/Engine.hpp"
+#include "Graphics/TextureAtlas.hpp"
 #include "Network/NetworkManager.hpp"
 #include <Common/Input/Action.hpp>
 #include <Common/Input/ActionType.hpp>
@@ -16,17 +17,62 @@
 #include <SFML/Window/Event.hpp>
 #include <SFML/Window/Keyboard.hpp>
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 namespace Client::Game
 {
-
 	Game::Game(Engine& engine) :
-	    State(engine)
+	    State(engine),
+	    m_textureAtlas(sf::Vector2u(32, 32), sf::Vector2u(32, 32))
 	{
-		engine.assetManager.loadAsset("test_level.dat", "test_level");
-		engine.assetManager.loadAsset("player.png", "player");
+		engine.assetManager.loadAsset("levels/test_level.dat", "test_level");
+		engine.assetManager.loadAsset("textures/player.png", "player");
+
+#define LOAD_TILE_TEXTURE(NAME) engine.assetManager.loadAsset("textures/" #NAME ".png", #NAME)
+#define LOAD_TILE_DATA(NAME) engine.assetManager.loadAsset("tiles/" #NAME ".json", "tile_data_" #NAME)
+
+		// TODO - Create some sort of manifest format to load all these
+		LOAD_TILE_TEXTURE(tile_grass_centre);
+		LOAD_TILE_TEXTURE(tile_stone_centre);
+		LOAD_TILE_TEXTURE(tile_water_centre);
+		LOAD_TILE_TEXTURE(tile_grass_stone_east);
+		LOAD_TILE_TEXTURE(tile_grass_stone_west);
+		LOAD_TILE_TEXTURE(tile_grass_stone_north);
+		LOAD_TILE_TEXTURE(tile_grass_stone_south);
+		LOAD_TILE_TEXTURE(tile_grass_water_east);
+		LOAD_TILE_TEXTURE(tile_grass_water_west);
+		LOAD_TILE_TEXTURE(tile_grass_water_north);
+		LOAD_TILE_TEXTURE(tile_grass_water_south);
+
+		LOAD_TILE_DATA(grass_centre);
+		LOAD_TILE_DATA(stone_centre);
+		LOAD_TILE_DATA(water_centre);
+		LOAD_TILE_DATA(grass_stone_east);
+		LOAD_TILE_DATA(grass_stone_west);
+		LOAD_TILE_DATA(grass_stone_north);
+		LOAD_TILE_DATA(grass_stone_south);
+		LOAD_TILE_DATA(grass_water_east);
+		LOAD_TILE_DATA(grass_water_west);
+		LOAD_TILE_DATA(grass_water_north);
+		LOAD_TILE_DATA(grass_water_south);
+
+#undef LOAD_TILE_TEXTURE
+#undef LOAD_TILE_DATA
+
+		loadTile(engine.assetManager.getAsset("tile_data_grass_centre"));
+		loadTile(engine.assetManager.getAsset("tile_data_stone_centre"));
+		loadTile(engine.assetManager.getAsset("tile_data_water_centre"));
+		loadTile(engine.assetManager.getAsset("tile_data_grass_stone_east"));
+		loadTile(engine.assetManager.getAsset("tile_data_grass_stone_west"));
+		loadTile(engine.assetManager.getAsset("tile_data_grass_stone_north"));
+		loadTile(engine.assetManager.getAsset("tile_data_grass_stone_south"));
+		loadTile(engine.assetManager.getAsset("tile_data_grass_water_east"));
+		loadTile(engine.assetManager.getAsset("tile_data_grass_water_west"));
+		loadTile(engine.assetManager.getAsset("tile_data_grass_water_north"));
+		loadTile(engine.assetManager.getAsset("tile_data_grass_water_south"));
 
 		m_camera.setCenter(sf::Vector2f(0.0F, 0.0F));
 		m_camera.setSize(static_cast<sf::Vector2f>(engine.window.getSize()));
@@ -42,23 +88,9 @@ namespace Client::Game
 		engine.inputManager.bindAction(sf::Keyboard::D, Common::Input::ActionType::StrafeRight);
 
 		const auto& testLevel = engine.assetManager.getAsset("test_level");
+		m_level               = Common::World::Level(testLevel);
 
-		for (auto yPos = 0; yPos < Common::World::LEVEL_HEIGHT; ++yPos)
-		{
-			for (auto xPos = 0; xPos < Common::World::LEVEL_WIDTH; ++xPos)
-			{
-				auto tile    = Common::World::Tile();
-				tile.type[0] = static_cast<std::uint8_t>(testLevel.at((xPos + yPos * Common::World::LEVEL_WIDTH) * 4 + 0));
-				tile.type[1] = static_cast<std::uint8_t>(testLevel.at((xPos + yPos * Common::World::LEVEL_WIDTH) * 4 + 1));
-				tile.type[2] = static_cast<std::uint8_t>(testLevel.at((xPos + yPos * Common::World::LEVEL_WIDTH) * 4 + 2));
-				tile.travelMode
-				    = static_cast<Common::World::Tile::TravelMode>(testLevel.at((xPos + yPos * Common::World::LEVEL_WIDTH) * 4 + 3));
-
-				m_level.setTile(xPos, yPos, tile);
-			}
-		}
-
-		m_terrainRenderer.addLevel(m_level);
+		m_terrainRenderer.addLevel(entt::hashed_string("test_level").value(), m_level, m_textureAtlas);
 	}
 
 	Game::~Game()
@@ -251,12 +283,39 @@ namespace Client::Game
 	auto Game::render(sf::RenderTarget& renderTarget) -> void
 	{
 		renderTarget.setView(m_camera);
-		m_terrainRenderer.render(renderTarget);
+		m_terrainRenderer.render(renderTarget, m_textureAtlas.getTexture());
+
 
 		for (const auto entity : m_registry.view<sf::Sprite>())
 		{
 			renderTarget.draw(m_registry.get<sf::Sprite>(entity));
 		}
+	}
+
+	auto Game::loadTile(const std::vector<char>& data) -> void
+	{
+		if (data.empty())
+		{
+			spdlog::debug("Tried to load a tile but the data is empty");
+			return;
+		}
+		auto json = nlohmann::json::parse(data);
+
+		auto identifier  = json.at("identifier");
+		auto textureData = engine.assetManager.getAsset(json.at("texture_path"));
+
+		auto image = sf::Image();
+		{
+			auto success = image.loadFromMemory(textureData.data(), textureData.size());
+			if (!success)
+			{
+				spdlog::warn("Failed to load tile {}", json.at("texture_path"));
+				return;
+			}
+		}
+
+		m_textureAtlas.addTexture(identifier, image);
+		spdlog::debug("Loaded tile {}", static_cast<std::uint32_t>(identifier));
 	}
 
 } // namespace Client::Game

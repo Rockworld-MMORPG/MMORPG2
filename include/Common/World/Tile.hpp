@@ -8,7 +8,6 @@ namespace Common::World
 
 	struct Tile
 	{
-		std::array<std::uint8_t, 3> type;
 		enum class TravelMode : std::uint8_t
 		{
 			None = 0,

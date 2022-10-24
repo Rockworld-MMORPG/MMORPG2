@@ -2,6 +2,7 @@
 
 #include "World/TerrainTile.hpp"
 #include <Common/World/Level.hpp>
+#include <unordered_map>
 
 namespace Client::World
 {
@@ -9,11 +10,11 @@ namespace Client::World
 	class TerrainRenderer
 	{
 	public:
-		auto addLevel(Common::World::Level& level) -> void;
-		auto render(sf::RenderTarget& renderTarget) -> void;
+		auto addLevel(std::uint32_t identifier, Common::World::Level& level, Graphics::TextureAtlas& textureAtlas) -> void;
+		auto render(sf::RenderTarget& renderTarget, sf::Texture& atlas) -> void;
 
 	private:
-		std::vector<TerrainTile> m_tiles;
+		std::unordered_map<std::uint32_t, TerrainTile> m_tiles;
 	};
 
 } // namespace Client::World
