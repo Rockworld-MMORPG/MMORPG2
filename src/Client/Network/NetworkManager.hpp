@@ -19,6 +19,7 @@ namespace Client
 
 		auto connect() -> void;
 		auto disconnect() -> void;
+		auto isConnected() const -> bool;
 
 		auto update() -> void;
 
@@ -37,6 +38,8 @@ namespace Client
 
 		auto sendTCP(const Common::Network::Message& message) -> void;
 		auto receiveTCP() -> void;
+
+		bool m_isConnected;
 
 		entt::entity m_clientID;
 		std::uint64_t m_currentMessageIdentifier;

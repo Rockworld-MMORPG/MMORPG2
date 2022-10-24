@@ -11,6 +11,7 @@ target_sources(
           Graphics/TextureAtlas.cpp
           Input/InputManager.cpp
           Network/NetworkManager.cpp
+          UI/UI.cpp
           World/TerrainTile.cpp
           World/TerrainRenderer.cpp)
 
