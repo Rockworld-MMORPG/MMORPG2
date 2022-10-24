@@ -56,4 +56,4 @@ jobs:
       # Build the project
       - name: Build
         shell: bash
-        run: cmake --build ${{ github.workspace }}/build --config Debug
+        run: cmake --build '${{ github.workspace }}/build' --config Debug
