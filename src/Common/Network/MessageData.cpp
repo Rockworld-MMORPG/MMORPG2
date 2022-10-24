@@ -22,32 +22,32 @@ namespace Common::Network
 	auto MessageData::operator<<(const std::uint16_t value) -> MessageData&
 	{
 		m_data.reserve(m_data.size() + 2);
-		m_data.emplace_back(static_cast<std::uint8_t>(value >> UINT8_WIDTH * 0));
-		m_data.emplace_back(static_cast<std::uint8_t>(value >> UINT8_WIDTH * 1));
+		m_data.emplace_back(static_cast<std::uint8_t>(value >> sizeof(std::uint8_t) * 0));
+		m_data.emplace_back(static_cast<std::uint8_t>(value >> sizeof(std::uint8_t) * 1));
 		return *this;
 	}
 
 	auto MessageData::operator<<(const std::uint32_t value) -> MessageData&
 	{
 		m_data.reserve(m_data.size() + 4);
-		m_data.emplace_back(static_cast<std::uint8_t>(value >> UINT8_WIDTH * 0));
-		m_data.emplace_back(static_cast<std::uint8_t>(value >> UINT8_WIDTH * 1));
-		m_data.emplace_back(static_cast<std::uint8_t>(value >> UINT8_WIDTH * 2));
-		m_data.emplace_back(static_cast<std::uint8_t>(value >> UINT8_WIDTH * 3));
+		m_data.emplace_back(static_cast<std::uint8_t>(value >> sizeof(std::uint8_t) * 0));
+		m_data.emplace_back(static_cast<std::uint8_t>(value >> sizeof(std::uint8_t) * 1));
+		m_data.emplace_back(static_cast<std::uint8_t>(value >> sizeof(std::uint8_t) * 2));
+		m_data.emplace_back(static_cast<std::uint8_t>(value >> sizeof(std::uint8_t) * 3));
 		return *this;
 	}
 
 	auto MessageData::operator<<(const std::uint64_t value) -> MessageData&
 	{
 		m_data.reserve(m_data.size() + 8);
-		m_data.emplace_back(static_cast<std::uint8_t>(value >> UINT8_WIDTH * 0));
-		m_data.emplace_back(static_cast<std::uint8_t>(value >> UINT8_WIDTH * 1));
-		m_data.emplace_back(static_cast<std::uint8_t>(value >> UINT8_WIDTH * 2));
-		m_data.emplace_back(static_cast<std::uint8_t>(value >> UINT8_WIDTH * 3));
-		m_data.emplace_back(static_cast<std::uint8_t>(value >> UINT8_WIDTH * 4));
-		m_data.emplace_back(static_cast<std::uint8_t>(value >> UINT8_WIDTH * 5));
-		m_data.emplace_back(static_cast<std::uint8_t>(value >> UINT8_WIDTH * 6));
-		m_data.emplace_back(static_cast<std::uint8_t>(value >> UINT8_WIDTH * 7));
+		m_data.emplace_back(static_cast<std::uint8_t>(value >> sizeof(std::uint8_t) * 0));
+		m_data.emplace_back(static_cast<std::uint8_t>(value >> sizeof(std::uint8_t) * 1));
+		m_data.emplace_back(static_cast<std::uint8_t>(value >> sizeof(std::uint8_t) * 2));
+		m_data.emplace_back(static_cast<std::uint8_t>(value >> sizeof(std::uint8_t) * 3));
+		m_data.emplace_back(static_cast<std::uint8_t>(value >> sizeof(std::uint8_t) * 4));
+		m_data.emplace_back(static_cast<std::uint8_t>(value >> sizeof(std::uint8_t) * 5));
+		m_data.emplace_back(static_cast<std::uint8_t>(value >> sizeof(std::uint8_t) * 6));
+		m_data.emplace_back(static_cast<std::uint8_t>(value >> sizeof(std::uint8_t) * 7));
 		return *this;
 	}
 
@@ -56,10 +56,10 @@ namespace Common::Network
 		const auto tempValue = *reinterpret_cast<const std::uint32_t*>(&value);
 
 		m_data.reserve(m_data.size() + 4);
-		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint32_t>(tempValue) >> UINT8_WIDTH * 0));
-		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint32_t>(tempValue) >> UINT8_WIDTH * 1));
-		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint32_t>(tempValue) >> UINT8_WIDTH * 2));
-		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint32_t>(tempValue) >> UINT8_WIDTH * 3));
+		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint32_t>(tempValue) >> sizeof(std::uint8_t) * 0));
+		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint32_t>(tempValue) >> sizeof(std::uint8_t) * 1));
+		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint32_t>(tempValue) >> sizeof(std::uint8_t) * 2));
+		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint32_t>(tempValue) >> sizeof(std::uint8_t) * 3));
 		return *this;
 	}
 
@@ -68,14 +68,14 @@ namespace Common::Network
 		const auto tempValue = *reinterpret_cast<const std::uint64_t*>(&value);
 
 		m_data.reserve(m_data.size() + 8);
-		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> UINT8_WIDTH * 0));
-		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> UINT8_WIDTH * 1));
-		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> UINT8_WIDTH * 2));
-		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> UINT8_WIDTH * 3));
-		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> UINT8_WIDTH * 4));
-		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> UINT8_WIDTH * 5));
-		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> UINT8_WIDTH * 6));
-		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> UINT8_WIDTH * 7));
+		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> sizeof(std::uint8_t) * 0));
+		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> sizeof(std::uint8_t) * 1));
+		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> sizeof(std::uint8_t) * 2));
+		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> sizeof(std::uint8_t) * 3));
+		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> sizeof(std::uint8_t) * 4));
+		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> sizeof(std::uint8_t) * 5));
+		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> sizeof(std::uint8_t) * 6));
+		m_data.emplace_back(static_cast<std::uint8_t>(static_cast<std::uint64_t>(tempValue) >> sizeof(std::uint8_t) * 7));
 		return *this;
 	}
 
@@ -100,17 +100,17 @@ namespace Common::Network
 		return *this;
 	}
 
-#define UNPACK_MULTIPLE(VALUE_T, VALUE)                                            \
-	{                                                                                \
-		using value_t         = VALUE_T;                                               \
-		value                 = 0x0000;                                                \
-		auto packedValueCount = (sizeof(value_t) / sizeof(std::uint8_t));              \
-		for (auto i = 0; i < packedValueCount; ++i)                                    \
-		{                                                                              \
-			value |= static_cast<value_t>(m_data.at(m_readHead + i)) << UINT8_WIDTH * i; \
-		}                                                                              \
-		m_readHead += packedValueCount;                                                \
-		return *this;                                                                  \
+#define UNPACK_MULTIPLE(VALUE_T, VALUE)                                                     \
+	{                                                                                         \
+		using value_t         = VALUE_T;                                                        \
+		value                 = 0x0000;                                                         \
+		auto packedValueCount = (sizeof(value_t) / sizeof(std::uint8_t));                       \
+		for (auto i = 0; i < packedValueCount; ++i)                                             \
+		{                                                                                       \
+			value |= static_cast<value_t>(m_data.at(m_readHead + i)) << sizeof(std::uint8_t) * i; \
+		}                                                                                       \
+		m_readHead += packedValueCount;                                                         \
+		return *this;                                                                           \
 	}
 
 	auto MessageData::operator>>(std::uint16_t& value) -> MessageData&
@@ -135,7 +135,7 @@ namespace Common::Network
 		auto packedValueCount = (sizeof(value_t) / sizeof(std::uint8_t));
 		for (auto i = 0; i < packedValueCount; ++i)
 		{
-			tempValue |= static_cast<value_t>(m_data.at(m_readHead + i)) << UINT8_WIDTH * i;
+			tempValue |= static_cast<value_t>(m_data.at(m_readHead + i)) << sizeof(std::uint8_t) * i;
 		}
 
 		m_readHead += packedValueCount;
@@ -150,7 +150,7 @@ namespace Common::Network
 		auto packedValueCount = (sizeof(value_t) / sizeof(std::uint8_t));
 		for (auto i = 0; i < packedValueCount; ++i)
 		{
-			tempValue |= static_cast<value_t>(m_data.at(m_readHead + i)) << UINT8_WIDTH * i;
+			tempValue |= static_cast<value_t>(m_data.at(m_readHead + i)) << sizeof(std::uint8_t) * i;
 		}
 
 		m_readHead += packedValueCount;
@@ -165,7 +165,7 @@ namespace Common::Network
 		auto packedValueCount = (sizeof(std::uint32_t) / sizeof(std::uint8_t));
 		for (auto i = 0; i < packedValueCount; ++i)
 		{
-			temp |= static_cast<std::uint32_t>(m_data.at(m_readHead + i)) << UINT8_WIDTH * i;
+			temp |= static_cast<std::uint32_t>(m_data.at(m_readHead + i)) << sizeof(std::uint8_t) * i;
 		}
 		m_readHead += packedValueCount;
 		value = static_cast<entt::entity>(temp);
