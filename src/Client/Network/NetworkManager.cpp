@@ -15,7 +15,8 @@ namespace Client
 	NetworkManager::NetworkManager() :
 	    m_currentMessageIdentifier(0),
 	    m_lastServerMessageIdentifier(0),
-	    m_clientID(entt::null)
+	    m_clientID(entt::null),
+	    m_isConnected(false)
 	{
 		auto status = m_udpSocket.bind(sf::Socket::AnyPort);
 		if (status != sf::Socket::Status::Done)
@@ -78,6 +79,7 @@ namespace Client
 
 					m_socketSelector.add(m_tcpSocket);
 					m_socketSelector.add(m_udpSocket);
+					m_isConnected = true;
 					return;
 				}
 			}
@@ -104,6 +106,13 @@ namespace Client
 
 		m_tcpSocket.disconnect();
 		m_socketSelector.clear();
+
+		m_isConnected = false;
+	}
+
+	auto NetworkManager::isConnected() const -> bool
+	{
+		return m_isConnected;
 	}
 
 	auto NetworkManager::update() -> void

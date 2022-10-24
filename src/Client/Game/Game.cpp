@@ -43,8 +43,21 @@ namespace Client::Game
 		UI::createElement(m_registry, "image_portrait", 0, UI::ImageCreateInfo{sf::Vector2f(10.0F, 10.0F), sf::Vector2f(50.0F, 50.0F), m_playerTexture});
 		UI::createElement(m_registry, "text_health", 0, UI::TextCreateInfo{sf::Vector2f(100.0F, 10.0F), m_font, "Health [ 100 / 100 ]", 20});
 		UI::createElement(m_registry, "text_power", 0, UI::TextCreateInfo{sf::Vector2f(101.0F, 35.0F), m_font, "Power [ 100 / 100 ]", 20});
+		UI::createElement(m_registry, "button_connect", 0, UI::ButtonCreateInfo{sf::Vector2f(10.0F, 670.0F), sf::Vector2f(100.0F, 40.0F), "Connect", m_font, {}, [&](sf::Mouse::Button b) {
+			                                                                        if (engine.networkManager.isConnected()) { return; }
+			                                                                        engine.networkManager.connect();
+			                                                                        auto data = Common::Network::MessageData();
+			                                                                        engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, data);
+		                                                                        }});
+		UI::createElement(m_registry, "button_disconnect", 0, UI::ButtonCreateInfo{sf::Vector2f(120.0F, 670.0F), sf::Vector2f(100.0F, 40.0F), "Disconnect", m_font, {}, [&](sf::Mouse::Button b) {
+			                                                                           if (!engine.networkManager.isConnected()) { return; }
+			                                                                           engine.networkManager.disconnect();
+			                                                                           for (const auto entity : m_registry.view<entt::entity>())
+			                                                                           {
+				                                                                           m_registry.destroy(entity);
+			                                                                           }
+		                                                                           }});
 
-		engine.networkManager.connect();
 
 		engine.inputManager.bindAction(sf::Keyboard::W, Common::Input::ActionType::MoveForward);
 		engine.inputManager.bindAction(sf::Keyboard::A, Common::Input::ActionType::StrafeLeft);
@@ -189,8 +202,6 @@ namespace Client::Game
 					break;
 					case sf::Keyboard::Key::C:
 					{
-						auto data = Common::Network::MessageData();
-						engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, data);
 					}
 					break;
 					default:
@@ -263,7 +274,7 @@ namespace Client::Game
 		renderTarget.setView(m_camera);
 		m_terrainRenderer.render(renderTarget);
 
-		for (const auto entity : m_registry.view<sf::Sprite>(entt::exclude<UI::Layer>))
+		for (const auto entity : m_registry.view<sf::Sprite>(entt::exclude<UI::ElementData>))
 		{
 			renderTarget.draw(m_registry.get<sf::Sprite>(entity));
 		}
