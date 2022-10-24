@@ -5,6 +5,7 @@
 namespace Client::World
 {
 	const auto VERTICES_PER_TILE = 6U;
+	const auto TILE_SCALE        = 200.0F / 2.3F;
 
 	/*
 	  0 - Top left
@@ -34,7 +35,7 @@ namespace Client::World
 
 				for (auto i = std::size_t(0); i < VERTICES_PER_TILE; ++i)
 				{
-					m_vertexArray[index + i].position = sf::Vector2f(floatX + xOffsets.at(i), floatY + yOffsets.at(i)) * static_cast<float>(textureAtlas.getTextureSize().x);
+					m_vertexArray[index + i].position = sf::Vector2f(floatX + xOffsets.at(i), floatY + yOffsets.at(i)) * TILE_SCALE;
 				}
 
 				auto textureCoordinates = textureAtlas.getTextureCoordinates(level.getTile(xPos, yPos));
