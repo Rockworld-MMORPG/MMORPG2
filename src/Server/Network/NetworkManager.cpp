@@ -143,7 +143,7 @@ namespace Server
 	auto generateIdentifier(sf::IpAddress address, std::uint16_t port) -> std::uint64_t
 	{
 		std::uint64_t identifier = 0x00;
-		identifier |= static_cast<std::uint64_t>(address.toInteger()) << UINT32_WIDTH;
+		identifier |= static_cast<std::uint64_t>(address.toInteger()) << sizeof(std::uint32_t);
 		identifier |= static_cast<std::uint64_t>(port);
 		return identifier;
 	}

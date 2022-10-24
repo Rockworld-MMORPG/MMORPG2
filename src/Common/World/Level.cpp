@@ -25,10 +25,10 @@ namespace Common::World
 		auto index = std::size_t(0);
 		for (auto& tile : m_data)
 		{
-			tile |= static_cast<std::uint32_t>(data.at(index++)) << UINT8_WIDTH * 0;
-			tile |= static_cast<std::uint32_t>(data.at(index++)) << UINT8_WIDTH * 1;
-			tile |= static_cast<std::uint32_t>(data.at(index++)) << UINT8_WIDTH * 2;
-			tile |= static_cast<std::uint32_t>(data.at(index++)) << UINT8_WIDTH * 3;
+			tile |= static_cast<std::uint32_t>(data.at(index++)) << sizeof(std::uint8_t) * 0;
+			tile |= static_cast<std::uint32_t>(data.at(index++)) << sizeof(std::uint8_t) * 1;
+			tile |= static_cast<std::uint32_t>(data.at(index++)) << sizeof(std::uint8_t) * 2;
+			tile |= static_cast<std::uint32_t>(data.at(index++)) << sizeof(std::uint8_t) * 3;
 		}
 	}
 
