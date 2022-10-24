@@ -97,11 +97,12 @@ namespace Client::UI
 	auto destroyElement(entt::registry& registry, std::string identifier) -> void;
 
 	auto update(entt::registry& registry, sf::Time deltaTime) -> void;
-	auto handleEvents(entt::registry& registry, sf::Event& event) -> void;
+	auto handleEvents(entt::registry& registry, sf::Event& event) -> bool;
 
 	class UIRenderer
 	{
 	public:
+		auto resize(sf::Vector2f newSize) -> void;
 		auto render(entt::registry& registry, sf::RenderTarget& renderTarget) -> void;
 
 	private:

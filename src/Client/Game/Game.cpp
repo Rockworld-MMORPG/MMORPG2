@@ -32,6 +32,7 @@ namespace Client::Game
 	{
 		engine.assetManager.loadAsset("levels/test_level.dat", "test_level");
 		engine.assetManager.loadAsset("textures/player.png", "player");
+		engine.assetManager.loadAsset("OpenSans-Regular.ttf", "font");
 
 #define LOAD_TILE_TEXTURE(NAME) engine.assetManager.loadAsset("textures/" #NAME ".png", #NAME)
 #define LOAD_TILE_DATA(NAME) engine.assetManager.loadAsset("tiles/" #NAME ".json", "tile_data_" #NAME)
@@ -78,7 +79,9 @@ namespace Client::Game
 
 		m_camera.setCenter(sf::Vector2f(0.0F, 0.0F));
 		m_camera.setSize(sf::Vector2f(1280.0F, 720.0F));
+
 		engine.window.setView(m_camera);
+		m_uiRenderer.resize(sf::Vector2f(1280.0F, 720.0F));
 
 		const auto& player = engine.assetManager.getAsset("player");
 		auto success       = m_playerTexture.loadFromMemory(player.data(), player.size());
@@ -86,7 +89,7 @@ namespace Client::Game
 		const auto& font = engine.assetManager.getAsset("font");
 		success          = m_font.loadFromMemory(font.data(), font.size());
 
-		UI::createElement(m_registry, "image_portrait", 0, UI::ImageCreateInfo{sf::Vector2f(10.0F, 10.0F), sf::Vector2f(50.0F, 50.0F), m_playerTexture});
+		UI::createElement(m_registry, "image_portrait", 0, UI::ImageCreateInfo{sf::Vector2f(10.0F, 10.0F), sf::Vector2f(16.0F, 16.0F), m_playerTexture});
 		UI::createElement(m_registry, "text_health", 0, UI::TextCreateInfo{sf::Vector2f(100.0F, 10.0F), m_font, "Health [ 100 / 100 ]", 20});
 		UI::createElement(m_registry, "text_power", 0, UI::TextCreateInfo{sf::Vector2f(101.0F, 35.0F), m_font, "Power [ 100 / 100 ]", 20});
 		UI::createElement(m_registry, "button_connect", 0, UI::ButtonCreateInfo{sf::Vector2f(10.0F, 670.0F), sf::Vector2f(100.0F, 40.0F), "Connect", m_font, {}, [&](sf::Mouse::Button b) {
@@ -219,6 +222,13 @@ namespace Client::Game
 
 	auto Game::handleEvents(sf::Event& event) -> void
 	{
+		if (UI::handleEvents(m_registry, event))
+		{
+			return;
+		}
+
+		engine.inputManager.parseEvents(event);
+
 		switch (event.type)
 		{
 			case sf::Event::Closed:
@@ -230,36 +240,9 @@ namespace Client::Game
 				m_camera.setSize(windowSize);
 			}
 			break;
-			case sf::Event::KeyReleased:
-			{
-				switch (event.key.code)
-				{
-					case sf::Keyboard::Key::P:
-					{
-						auto data    = Common::Network::MessageData();
-						auto command = std::string("terminate");
-						for (const auto character : command)
-						{
-							data << static_cast<std::uint8_t>(character);
-						}
-
-						engine.networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Command, data);
-					}
-					break;
-					case sf::Keyboard::Key::C:
-					{
-					}
-					break;
-					default:
-						break;
-				}
-			}
-			break;
 			default:
 				break;
 		}
-
-		UI::handleEvents(m_registry, event);
 	}
 
 	auto Game::update(const sf::Time deltaTime) -> void

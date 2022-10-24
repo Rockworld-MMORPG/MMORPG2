@@ -1,6 +1,7 @@
 #include "UI/UI.hpp"
 #include "SFML/Graphics/Drawable.hpp"
 #include "SFML/Graphics/Transform.hpp"
+#include "SFML/Window/Mouse.hpp"
 #include <SFML/Graphics/CircleShape.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
@@ -149,6 +150,7 @@ namespace Client::UI
 		auto& background = registry.emplace<sf::RectangleShape>(entity);
 		background.setSize(createInfo.size);
 		background.setFillColor(sf::Color::White);
+		background.setOutlineThickness(2.0F);
 		background.setOutlineColor(sf::Color::Black);
 		background.setPosition(createInfo.position);
 
@@ -168,12 +170,13 @@ namespace Client::UI
 		        createInfo.textSize}));
 		registry.get<sf::Text>(data.children.front()).setFillColor(sf::Color::Black);
 
-		callbacks.onEnter = [&]() {
-			spdlog::debug("Became active");
+		callbacks.onPress = [&](const sf::Mouse::Button button) {
 			inputData.active = true;
+			background.setOutlineColor(sf::Color::Red);
 		};
-		callbacks.onEnter = [&]() {
+		callbacks.onExit = [&]() {
 			inputData.active = false;
+			background.setOutlineColor(sf::Color::Black);
 		};
 
 		return entity;
@@ -201,7 +204,7 @@ namespace Client::UI
 	{
 	}
 
-	auto handleEvents(entt::registry& registry, sf::Event& event) -> void
+	auto handleEvents(entt::registry& registry, sf::Event& event) -> bool
 	{
 		static auto mousePosition = sf::Vector2f();
 
@@ -257,19 +260,31 @@ namespace Client::UI
 				}
 			}
 			break;
+			// Consume events that should be going to text input
+			case sf::Event::KeyPressed:
+			case sf::Event::KeyReleased:
+			{
+				for (const auto entity : registry.view<TextInputData>())
+				{
+					auto& textData = registry.get<TextInputData>(entity);
+					if (textData.active)
+					{
+						return true;
+					}
+				}
+			}
+			break;
 			case sf::Event::TextEntered:
 			{
 				for (const auto entity : registry.view<TextInputData>())
 				{
 					auto& elementData = registry.get<ElementData>(entity);
 					auto& textData    = registry.get<TextInputData>(entity);
-					if (!elementData.mouseOver)
+					if (!textData.active)
 					{
-						spdlog::debug("{} is not active", static_cast<std::uint32_t>(entity));
 						continue;
 					}
 
-					spdlog::debug("Entered key: {}", static_cast<char>(event.text.unicode));
 
 					auto& data = registry.get<ElementData>(entity);
 					auto& text = registry.get<sf::Text>(data.children.front());
@@ -290,20 +305,25 @@ namespace Client::UI
 					}
 
 					text.setString(textData.input);
-					spdlog::debug(textData.input);
+					return true;
 				}
 			}
 			break;
 			default:
 				break;
 		}
+
+		return false;
+	}
+
+	auto UIRenderer::resize(sf::Vector2f newSize) -> void
+	{
+		m_uiView.setSize(newSize);
+		m_uiView.setCenter(newSize * 0.5F);
 	}
 
 	auto UIRenderer::render(entt::registry& registry, sf::RenderTarget& renderTarget) -> void
 	{
-		auto targetSize = static_cast<sf::Vector2f>(renderTarget.getSize());
-		m_uiView.setSize(targetSize);
-		m_uiView.setCenter(targetSize * 0.5F);
 		renderTarget.setView(m_uiView);
 
 		std::multimap<std::uint8_t, sf::Drawable*> elementsToDraw;

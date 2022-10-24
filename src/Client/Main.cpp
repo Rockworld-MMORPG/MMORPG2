@@ -12,7 +12,7 @@ auto main(int /* argc */, char** argv) -> int
 	spdlog::set_level(spdlog::level::trace);
 #endif
 
-	spdlog::info("Client version {}.{}.{}", Version::getMajor(), Version::getMinor(), Version::getPatch());
+	spdlog::info("Client version {}.{}.{}+{:08x}", Version::getMajor(), Version::getMinor(), Version::getPatch(), Version::getCommit());
 
 	Engine engine(std::filesystem::path(*argv).parent_path());
 	engine.pushState(std::make_unique<Game::Game>(engine));
