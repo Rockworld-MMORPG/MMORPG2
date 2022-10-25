@@ -1,4 +1,4 @@
-add_library(common)
+add_library(common STATIC)
 add_library(MMORPG::Common ALIAS common)
 
 target_sources(
