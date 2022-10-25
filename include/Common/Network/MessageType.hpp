@@ -1,12 +1,11 @@
 #pragma once
 
 #include "Common/Export.hpp"
+#include "Common/Network/MessageData.hpp"
 #include <cstdint>
 
 namespace Common::Network
 {
-
-	class COMMON_API MessageData;
 
 	enum class MessageType : std::uint8_t
 	{
@@ -26,7 +25,7 @@ namespace Common::Network
 		GetEntity     = 0x16,
 	};
 
-	auto operator<<(MessageData& messageData, MessageType messageType) -> MessageData&;
-	auto operator>>(MessageData& messageData, MessageType& messageType) -> MessageData&;
+	COMMON_API auto operator<<(MessageData& messageData, MessageType messageType) -> MessageData&;
+	COMMON_API auto operator>>(MessageData& messageData, MessageType& messageType) -> MessageData&;
 
 }; // namespace Common::Network

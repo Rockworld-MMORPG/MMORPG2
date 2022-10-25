@@ -17,6 +17,6 @@ namespace Common::World
 		} travelMode;
 	};
 
-	auto operator|(Tile::TravelMode modeA, Tile::TravelMode modeB) -> Tile::TravelMode;
+	COMMON_API auto operator|(Tile::TravelMode modeA, Tile::TravelMode modeB) -> Tile::TravelMode;
 
 } // namespace Common::World
