@@ -1,12 +1,13 @@
 #pragma once
 
+#include "Common/Export.hpp"
+#include "Common/Network/MessageData.hpp"
+
 namespace Common::Network
 {
 
-	class MessageData;
-
 	template<class DerivedComponent>
-	class SerialisedComponent
+	class COMMON_API SerialisedComponent
 	{
 	public:
 		auto serialise(MessageData& data) -> void

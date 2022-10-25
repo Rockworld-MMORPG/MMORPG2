@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/Export.hpp"
 #include "Common/World/Tile.hpp"
 #include <array>
 #include <vector>
@@ -10,7 +11,7 @@ namespace Common::World
 	const auto LEVEL_WIDTH  = std::size_t(256);
 	const auto LEVEL_HEIGHT = std::size_t(256);
 
-	class Level
+	class COMMON_API Level
 	{
 	public:
 		Level();

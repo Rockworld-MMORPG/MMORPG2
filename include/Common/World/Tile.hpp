@@ -1,12 +1,13 @@
 #pragma once
 
+#include "Common/Export.hpp"
 #include <array>
 #include <cstdint>
 
 namespace Common::World
 {
 
-	struct Tile
+	struct COMMON_API Tile
 	{
 		enum class TravelMode : std::uint8_t
 		{

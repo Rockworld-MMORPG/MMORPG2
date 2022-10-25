@@ -1,11 +1,13 @@
 #pragma once
 
+#include "Common/Export.hpp"
 #include <cstdint>
+
 namespace Common::Input
 {
 
 	using ActionType_t = std::uint32_t;
-	enum class ActionType : ActionType_t
+	enum class COMMON_API ActionType : ActionType_t
 	{
 		None = 0x00,
 

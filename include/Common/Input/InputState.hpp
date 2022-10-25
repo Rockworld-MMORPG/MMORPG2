@@ -1,11 +1,12 @@
 #pragma once
 
+#include "Common/Export.hpp"
 #include "Common/Network/MessageData.hpp"
 
 namespace Common::Input
 {
 
-	struct InputState
+	struct COMMON_API InputState
 	{
 		bool forwards, backwards, left, right;
 		bool changed;

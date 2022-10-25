@@ -1,11 +1,12 @@
 #pragma once
 
+#include "Common/Export.hpp"
 #include <cstdint>
 
 namespace Common::Network
 {
 
-	class MessageData;
+	class COMMON_API MessageData;
 
 	enum class MessageType : std::uint8_t
 	{

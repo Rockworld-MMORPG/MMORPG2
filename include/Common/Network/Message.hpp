@@ -1,14 +1,14 @@
 #pragma once
 
+#include "Common/Export.hpp"
 #include "Common/Network/MessageData.hpp"
 #include "Common/Network/MessageHeader.hpp"
-#include "spdlog/fmt/ostr.h"
 
 namespace Common::Network
 {
 	const std::size_t MAX_MESSAGE_LENGTH = 1 << 15;
 
-	struct Message
+	struct COMMON_API Message
 	{
 		MessageHeader header;
 		MessageData data;

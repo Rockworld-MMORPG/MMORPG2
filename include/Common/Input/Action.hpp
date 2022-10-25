@@ -1,12 +1,13 @@
 #pragma once
 
+#include "Common/Export.hpp"
 #include "Common/Input/ActionType.hpp"
 #include "Common/Network/MessageData.hpp"
 
 namespace Common::Input
 {
 
-	struct Action
+	struct COMMON_API Action
 	{
 		ActionType type;
 		using State_t = bool;

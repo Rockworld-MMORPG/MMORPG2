@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/Export.hpp"
 #include <mutex>
 #include <optional>
 #include <queue>
@@ -9,7 +10,7 @@ namespace Common::Util
 {
 
 	template<typename T>
-	class ThreadSafeQueue
+	class COMMON_API ThreadSafeQueue
 	{
 	public:
 		auto push(T&& value) -> void

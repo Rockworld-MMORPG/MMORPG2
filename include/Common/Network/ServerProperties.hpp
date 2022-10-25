@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/Export.hpp"
 #include <SFML/Network/IpAddress.hpp>
 #include <cstdint>
 
