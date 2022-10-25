@@ -11,6 +11,7 @@ target_sources(
           Input/InputState.cpp
           World/Level.cpp
           World/Tile.cpp)
+
 target_include_directories(
   common
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
@@ -19,8 +20,6 @@ target_include_directories(
 target_link_libraries(common PUBLIC SFML::Network EnTT::EnTT spdlog::spdlog)
 target_compile_features(common PRIVATE cxx_std_20)
 target_compile_definitions(common PRIVATE _EXPORT_COMMON=TRUE)
-
-message(STATUS ${COMPILE_DEFINITIONS})
 
 set(COMMON_VERSION_MAJOR 0)
 set(COMMON_VERSION_MINOR 1)
