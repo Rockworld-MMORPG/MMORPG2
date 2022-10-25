@@ -7,6 +7,7 @@
 #include "spdlog/fmt/bundled/format.h"
 #include <Common/Network/MessageType.hpp>
 #include <Common/Network/ServerProperties.hpp>
+#include <array>
 #include <spdlog/spdlog.h>
 #include <thread>
 

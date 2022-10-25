@@ -1,4 +1,4 @@
-add_library(common STATIC)
+add_library(common)
 add_library(MMORPG::Common ALIAS common)
 
 target_sources(
@@ -19,7 +19,9 @@ target_include_directories(
 
 target_link_libraries(common PUBLIC SFML::Network EnTT::EnTT spdlog::spdlog)
 target_compile_features(common PRIVATE cxx_std_20)
-target_compile_definitions(common PRIVATE _EXPORT_COMMON=TRUE)
+target_compile_definitions(
+  common PRIVATE _EXPORT_COMMON=TRUE
+                 _BUILD_SHARED=$<IF:$<STREQUAL:$<TARGET_PROPERTY:common,TYPE>,SHARED_LIBRARY>,TRUE,FALSE>)
 
 set(COMMON_VERSION_MAJOR 0)
 set(COMMON_VERSION_MINOR 1)

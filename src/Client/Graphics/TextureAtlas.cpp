@@ -1,5 +1,4 @@
 #include "Graphics/TextureAtlas.hpp"
-#include <GL/gl.h>
 #include <SFML/OpenGL.hpp>
 #include <cstddef>
 #include <spdlog/spdlog.h>
