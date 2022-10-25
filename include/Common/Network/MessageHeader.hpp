@@ -8,7 +8,7 @@
 namespace Common::Network
 {
 
-	struct COMMON_API MessageHeader
+	struct MessageHeader
 	{
 		entt::entity entityID    = entt::null;
 		std::uint64_t identifier = 0;

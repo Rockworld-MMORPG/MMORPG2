@@ -7,7 +7,7 @@ namespace Common::Network
 {
 
 	template<class DerivedComponent>
-	class COMMON_API SerialisedComponent
+	class SerialisedComponent
 	{
 	public:
 		auto serialise(MessageData& data) -> void

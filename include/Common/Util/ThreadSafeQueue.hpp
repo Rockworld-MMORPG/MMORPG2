@@ -10,7 +10,7 @@ namespace Common::Util
 {
 
 	template<typename T>
-	class COMMON_API ThreadSafeQueue
+	class ThreadSafeQueue
 	{
 	public:
 		auto push(T&& value) -> void

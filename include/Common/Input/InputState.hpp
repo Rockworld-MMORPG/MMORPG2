@@ -6,13 +6,13 @@
 namespace Common::Input
 {
 
-	struct COMMON_API InputState
+	struct InputState
 	{
 		bool forwards, backwards, left, right;
 		bool changed;
 	};
 
-	auto operator<<(Common::Network::MessageData& data, InputState state) -> Network::MessageData&;
-	auto operator>>(Common::Network::MessageData& data, InputState& state) -> Network::MessageData&;
+	COMMON_API auto operator<<(Common::Network::MessageData& data, InputState state) -> Network::MessageData&;
+	COMMON_API auto operator>>(Common::Network::MessageData& data, InputState& state) -> Network::MessageData&;
 
 } // namespace Common::Input

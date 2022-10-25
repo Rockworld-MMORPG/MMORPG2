@@ -7,7 +7,7 @@
 namespace Common::Input
 {
 
-	struct COMMON_API Action
+	struct Action
 	{
 		ActionType type;
 		using State_t = bool;
@@ -18,7 +18,7 @@ namespace Common::Input
 		} state;
 	};
 
-	auto operator<<(Common::Network::MessageData& data, Action action) -> Network::MessageData&;
-	auto operator>>(Common::Network::MessageData& data, Action& action) -> Network::MessageData&;
+	COMMON_API auto operator<<(Common::Network::MessageData& data, Action action) -> Network::MessageData&;
+	COMMON_API auto operator>>(Common::Network::MessageData& data, Action& action) -> Network::MessageData&;
 
 } // namespace Common::Input

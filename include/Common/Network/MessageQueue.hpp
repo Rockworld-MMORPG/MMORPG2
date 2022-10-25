@@ -1,12 +1,13 @@
 #pragma once
 
 #include "Common/Export.hpp"
+#include "Common/Network/Message.hpp"
 #include "Common/Util/ThreadSafeQueue.hpp"
 
 namespace Common::Network
 {
 	template<typename T>
-	class COMMON_API MessageQueue
+	class MessageQueue
 	{
 	public:
 		auto pushInbound(T&& value) -> void

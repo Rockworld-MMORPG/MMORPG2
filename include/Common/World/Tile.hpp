@@ -7,7 +7,7 @@
 namespace Common::World
 {
 
-	struct COMMON_API Tile
+	struct Tile
 	{
 		enum class TravelMode : std::uint8_t
 		{

@@ -6,7 +6,7 @@
 namespace Common::Network
 {
 
-	enum class COMMON_API Protocol : std::uint8_t
+	enum class Protocol : std::uint8_t
 	{
 		TCP,
 		UDP
