@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/Export.hpp"
 #include <cstdint>
 #include <entt/entity/entity.hpp>
 #include <vector>
@@ -7,7 +8,7 @@
 namespace Common::Network
 {
 
-	class MessageData
+	class COMMON_API MessageData
 	{
 	public:
 		MessageData();

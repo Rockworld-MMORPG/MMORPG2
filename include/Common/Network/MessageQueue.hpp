@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Common/Export.hpp"
+#include "Common/Network/Message.hpp"
 #include "Common/Util/ThreadSafeQueue.hpp"
 
 namespace Common::Network

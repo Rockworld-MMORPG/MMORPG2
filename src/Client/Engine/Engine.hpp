@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Assets/AssetManager.hpp"
-#include "Engine/State.hpp"
 #include "Input/InputManager.hpp"
 #include "Network/NetworkManager.hpp"
 #include <SFML/Graphics/RenderWindow.hpp>
@@ -10,6 +9,8 @@
 
 namespace Client
 {
+
+	class State;
 
 	class Engine
 	{

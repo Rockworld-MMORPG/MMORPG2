@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/Export.hpp"
 #include <array>
 #include <cstdint>
 
@@ -16,6 +17,6 @@ namespace Common::World
 		} travelMode;
 	};
 
-	auto operator|(Tile::TravelMode modeA, Tile::TravelMode modeB) -> Tile::TravelMode;
+	COMMON_API auto operator|(Tile::TravelMode modeA, Tile::TravelMode modeB) -> Tile::TravelMode;
 
 } // namespace Common::World

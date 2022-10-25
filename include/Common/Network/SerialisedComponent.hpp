@@ -1,9 +1,10 @@
 #pragma once
 
+#include "Common/Export.hpp"
+#include "Common/Network/MessageData.hpp"
+
 namespace Common::Network
 {
-
-	class MessageData;
 
 	template<class DerivedComponent>
 	class SerialisedComponent

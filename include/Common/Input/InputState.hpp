@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/Export.hpp"
 #include "Common/Network/MessageData.hpp"
 
 namespace Common::Input
@@ -11,7 +12,7 @@ namespace Common::Input
 		bool changed;
 	};
 
-	auto operator<<(Common::Network::MessageData& data, InputState state) -> Network::MessageData&;
-	auto operator>>(Common::Network::MessageData& data, InputState& state) -> Network::MessageData&;
+	COMMON_API auto operator<<(Common::Network::MessageData& data, InputState state) -> Network::MessageData&;
+	COMMON_API auto operator>>(Common::Network::MessageData& data, InputState& state) -> Network::MessageData&;
 
 } // namespace Common::Input

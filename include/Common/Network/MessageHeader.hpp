@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/Export.hpp"
 #include "Common/Network/MessageType.hpp"
 #include "Common/Network/Protocol.hpp"
 #include <entt/entity/entity.hpp>

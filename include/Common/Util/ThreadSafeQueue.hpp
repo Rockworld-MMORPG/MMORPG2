@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/Export.hpp"
 #include <mutex>
 #include <optional>
 #include <queue>
