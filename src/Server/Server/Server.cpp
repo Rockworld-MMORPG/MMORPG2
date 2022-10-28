@@ -1,13 +1,14 @@
 #include "Server.hpp"
+#include "Common/Input/ActionType.hpp"
 #include "Common/Network/Message.hpp"
 #include "Common/Network/MessageData.hpp"
 #include "Common/Network/MessageType.hpp"
 #include "Common/Network/Protocol.hpp"
 #include "Game/Player.hpp"
-#include "SFML/System/Time.hpp"
 #include <Common/Input/Action.hpp>
 #include <Common/Input/InputState.hpp>
 #include <SFML/System/Sleep.hpp>
+#include <SFML/System/Time.hpp>
 #include <spdlog/spdlog.h>
 #include <thread>
 
@@ -58,7 +59,7 @@ namespace Server
 			{
 				auto data = Common::Network::MessageData();
 				data << entity << inputState;
-				server.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::InputState, data);
+				server.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Server_InputState, data);
 				inputState.changed = false;
 			}
 		}
@@ -66,7 +67,7 @@ namespace Server
 
 	HANDLER_FN(Connect)
 	{
-		std::uint16_t udpPort = 0;
+		auto udpPort = std::uint16_t(0);
 		message.data >> udpPort;
 		server.networkManager.setClientUdpPort(message.header.entityID, udpPort);
 	}
@@ -75,8 +76,8 @@ namespace Server
 	{
 		auto data = Common::Network::MessageData();
 		data << message.header.entityID;
-		server.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::DestroyEntity, data);
-		server.networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Disconnect, message.header.entityID, data);
+		server.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Server_DestroyEntity, data);
+		server.networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Server_Disconnect, message.header.entityID, data);
 		server.networkManager.markForDisconnect(message.header.entityID);
 	}
 
@@ -101,7 +102,7 @@ namespace Server
 		auto data = Common::Network::MessageData();
 		data << message.header.entityID;
 		player.serialise(data);
-		server.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, data);
+		server.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Server_CreateEntity, data);
 	}
 
 	HANDLER_FN(Action)
@@ -138,6 +139,8 @@ namespace Server
 				inputState.right = (action.state == Common::Input::Action::State::Begin);
 			}
 			break;
+			default:
+				break;
 		}
 	}
 
@@ -156,12 +159,12 @@ namespace Server
 
 		using MT
 		    = Common::Network::MessageType;
-		addMessageHandler(MT::Connect, handlerConnect);
-		addMessageHandler(MT::Disconnect, handlerDisconnect);
+		addMessageHandler(MT::Client_Connect, handlerConnect);
+		addMessageHandler(MT::Client_Disconnect, handlerDisconnect);
 		addMessageHandler(MT::Command, handlerCommand);
 
-		addMessageHandler(MT::CreateEntity, handlerCreateEntity);
-		addMessageHandler(MT::Action, handlerAction);
+		addMessageHandler(MT::Client_Spawn, handlerCreateEntity);
+		addMessageHandler(MT::Client_Action, handlerAction);
 
 		commandShell.registerCommand("terminate", [&](std::vector<std::string> tokens) {
 			m_serverShouldExit = true;

@@ -7,22 +7,27 @@
 namespace Common::Network
 {
 
-	enum class MessageType : std::uint8_t
+	using MessageType_t = std::uint16_t;
+	enum class MessageType : MessageType_t
 	{
 		// 0x0 - Control messages
-		None       = 0x00,
-		Connect    = 0x01,
-		Disconnect = 0x02,
-		Command    = 0x03,
+		None,
+		Command,
 
-		// 0x1 - Gameplay messages
-		CreateEntity  = 0x10,
-		DestroyEntity = 0x11,
-		Movement      = 0x12,
-		Position      = 0x13,
-		Action        = 0x14,
-		InputState    = 0x15,
-		GetEntity     = 0x16,
+		Client_Connect,
+		Client_Disconnect,
+		Client_GetClientID,
+		Client_Spawn,
+		Client_Action,
+		Client_InputState,
+		Client_GetWorldState,
+
+		Server_SetClientID,
+		Server_Disconnect,
+		Server_CreateEntity,
+		Server_DestroyEntity,
+		Server_InputState,
+		Server_WorldState,
 	};
 
 	COMMON_API auto operator<<(MessageData& messageData, MessageType messageType) -> MessageData&;

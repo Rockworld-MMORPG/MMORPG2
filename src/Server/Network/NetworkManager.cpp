@@ -167,17 +167,21 @@ namespace Server
 			spdlog::warn("Tried to find client {} but they do not exist", static_cast<std::uint32_t>(entityID));
 		}
 
-		auto& client    = server.registry.get<Client>(entityID);
-		client.udpPort  = udpPort;
-		auto identifier = generateIdentifier(client.tcpSocket->getRemoteAddress().value(), udpPort);
-		m_clientIPMap.emplace(identifier, entityID);
+		auto& client = server.registry.get<Client>(entityID);
+
+		auto originalIdentifier = generateIdentifier(*client.tcpSocket->getRemoteAddress(), client.udpPort);
+		m_clientIPMap.erase(originalIdentifier);
+
+		client.udpPort     = udpPort;
+		auto newIdentifier = generateIdentifier(client.tcpSocket->getRemoteAddress().value(), udpPort);
+		m_clientIPMap.emplace(newIdentifier, entityID);
 		spdlog::debug("Set client {} UDP port to {}", static_cast<std::uint32_t>(entityID), udpPort);
-		spdlog::debug("Mapping identifier {} ({}:{}) to {}", identifier, client.tcpSocket->getRemoteAddress()->toString(), udpPort, static_cast<std::uint32_t>(entityID));
+		spdlog::debug("Mapping identifier {} ({}:{}) to {}", newIdentifier, client.tcpSocket->getRemoteAddress()->toString(), udpPort, static_cast<std::uint32_t>(entityID));
 
 		// Send the client back their client ID
 		auto data = Common::Network::MessageData();
 		data << entityID;
-		pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Connect, entityID, data);
+		pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Server_SetClientID, entityID, data);
 	}
 
 	auto NetworkManager::markForDisconnect(entt::entity entityID) -> void
@@ -207,7 +211,7 @@ namespace Server
 
 				auto data = Common::Network::MessageData();
 				data << entityID;
-				pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Connect, entityID, data);
+				pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Server_SetClientID, entityID, data);
 			}
 			break;
 			default:
@@ -386,7 +390,7 @@ namespace Server
 				message.unpack(buffer, length);
 
 				// Special case because setting ports is hard
-				if (message.header.type == Common::Network::MessageType::Connect)
+				if (message.header.type == Common::Network::MessageType::Client_Connect)
 				{
 					message.header.entityID = entityID;
 				}

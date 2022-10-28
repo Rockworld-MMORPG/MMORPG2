@@ -96,7 +96,7 @@ namespace Client::Game
 			                                                                        if (engine.networkManager.isConnected()) { return; }
 			                                                                        engine.networkManager.connect();
 			                                                                        auto data = Common::Network::MessageData();
-			                                                                        engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::CreateEntity, data);
+			                                                                        engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Client_Spawn, data);
 		                                                                        }});
 		UI::createElement(m_registry, "button_disconnect", 0, UI::ButtonCreateInfo{sf::Vector2f(120.0F, 670.0F), sf::Vector2f(100.0F, 40.0F), "Disconnect", m_font, {}, [&](sf::Mouse::Button b) {
 			                                                                           if (!engine.networkManager.isConnected()) { return; }
@@ -131,7 +131,7 @@ namespace Client::Game
 	{
 		switch (message.header.type)
 		{
-			case Common::Network::MessageType::Disconnect:
+			case Common::Network::MessageType::Server_Disconnect:
 				engine.networkManager.disconnect();
 				break;
 			default:
@@ -143,7 +143,7 @@ namespace Client::Game
 	{
 		switch (message.header.type)
 		{
-			case Common::Network::MessageType::CreateEntity:
+			case Common::Network::MessageType::Server_CreateEntity:
 			{
 				auto entity  = m_registry.create();
 				auto& sprite = m_registry.emplace<sf::Sprite>(entity);
@@ -155,7 +155,7 @@ namespace Client::Game
 				auto& inputState = m_registry.emplace<Common::Input::InputState>(entity);
 			}
 			break;
-			case Common::Network::MessageType::InputState:
+			case Common::Network::MessageType::Server_InputState:
 			{
 				auto serverEntity = entt::entity();
 				message.data >> serverEntity;
@@ -170,7 +170,7 @@ namespace Client::Game
 				}
 			}
 			break;
-			case Common::Network::MessageType::DestroyEntity:
+			case Common::Network::MessageType::Server_DestroyEntity:
 			{
 				auto serverEntity = entt::entity();
 				auto localEntity  = entt::entity(entt::null);
@@ -217,7 +217,7 @@ namespace Client::Game
 		auto data = Common::Network::MessageData();
 		data << action;
 
-		networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Action, data);
+		networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Client_Action, data);
 	}
 
 	auto Game::handleEvents(sf::Event& event) -> void
@@ -253,13 +253,8 @@ namespace Client::Game
 		for (const auto actionType : changedStates)
 		{
 			auto pressed = engine.inputManager.getState(actionType).isPressed;
-			auto action  = Common::Input::Action();
-			action.state = pressed ? Common::Input::Action::State::Begin : Common::Input::Action::State::End;
-			action.type  = actionType;
 
-			auto data = Common::Network::MessageData();
-			data << action;
-			engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Action, data);
+			sendAction(actionType, pressed ? Common::Input::Action::State::Begin : Common::Input::Action::State::End, engine.networkManager);
 		}
 
 		for (const auto entity : m_registry.view<sf::Sprite, Common::Input::InputState>())
