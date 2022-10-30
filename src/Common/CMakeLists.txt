@@ -4,6 +4,8 @@ add_library(MMORPG::Common ALIAS common)
 target_sources(
   common
   PRIVATE Common.cpp
+          Game/WorldPosition.cpp
+          Game/WorldEntityType.cpp
           Network/Message.cpp
           Network/MessageData.cpp
           Network/MessageType.cpp

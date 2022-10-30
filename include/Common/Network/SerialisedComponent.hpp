@@ -12,12 +12,12 @@ namespace Common::Network
 	public:
 		auto serialise(MessageData& data) -> void
 		{
-			static_cast<DerivedComponent>(this)->serialise(data);
+			static_cast<DerivedComponent*>(this)->serialise(data);
 		}
 
 		auto deserialise(MessageData& data) -> void
 		{
-			static_cast<DerivedComponent>(this)->deserialise(data);
+			static_cast<DerivedComponent*>(this)->deserialise(data);
 		}
 	};
 
