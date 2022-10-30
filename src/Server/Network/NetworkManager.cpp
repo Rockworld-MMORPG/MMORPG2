@@ -223,6 +223,13 @@ namespace Server
 	auto NetworkManager::closeConnection(entt::entity entityID) -> void
 	{
 		spdlog::debug("Closing connection {}", static_cast<std::uint32_t>(entityID));
+
+		if (!server.registry.valid(entityID))
+		{
+			spdlog::warn("Attempted to close connection {} but the entity is not valid", static_cast<std::uint32_t>(entityID));
+			return;
+		}
+
 		if (!server.registry.all_of<Client>(entityID))
 		{
 			spdlog::warn("Attempted to close connection {} but it does not exist", static_cast<std::uint32_t>(entityID));
@@ -337,7 +344,7 @@ namespace Server
 		auto optClientID = resolveClientID(remoteAddress.value(), remotePort);
 		if (!optClientID.has_value())
 		{
-			spdlog::warn("Received a packet from a client without an ID (from {})", static_cast<std::uint32_t>(message.header.entityID));
+			spdlog::warn("Received a packet from a client without an ID (client sent {})", static_cast<std::uint32_t>(message.header.entityID));
 			return;
 		}
 

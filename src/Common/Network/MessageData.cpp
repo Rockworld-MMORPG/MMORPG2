@@ -1,6 +1,28 @@
 #include "Common/Network/MessageData.hpp"
 #include <cstdint>
 
+
+#define PACK_MULTIPLE(VALUE_T, VALUE)                                                          \
+	{                                                                                            \
+		m_data.reserve(m_data.size() + sizeof(VALUE_T));                                           \
+		for (auto i = 0; i < sizeof(VALUE_T); ++i)                                                 \
+		{                                                                                          \
+			m_data.emplace_back(static_cast<std::uint8_t>((VALUE) >> sizeof(std::uint8_t) * i * 8)); \
+		}                                                                                          \
+	}
+
+#define UNPACK_MULTIPLE(VALUE_T, VALUE)                                                             \
+	{                                                                                                 \
+		using value_t         = VALUE_T;                                                                \
+		(VALUE)               = 0;                                                                      \
+		auto packedValueCount = (sizeof(value_t) / sizeof(std::uint8_t));                               \
+		for (auto i = 0; i < packedValueCount; ++i)                                                     \
+		{                                                                                               \
+			(VALUE) |= static_cast<value_t>(m_data.at(m_readHead + i)) << (sizeof(std::uint8_t) * i * 8); \
+		}                                                                                               \
+		m_readHead += packedValueCount;                                                                 \
+	}
+
 namespace Common::Network
 {
 
@@ -9,7 +31,7 @@ namespace Common::Network
 
 	auto MessageData::operator<<(const bool value) -> MessageData&
 	{
-		m_data.emplace_back(value ? std::uint8_t(0xFF) : std::uint8_t(0xAA));
+		m_data.emplace_back(static_cast<std::uint8_t>(value));
 		return *this;
 	}
 
@@ -19,57 +41,50 @@ namespace Common::Network
 		return *this;
 	}
 
-#define PACK_MULTIPLE(VALUE_T, VALUE)                                                          \
-	{                                                                                            \
-		m_data.reserve(m_data.size() + sizeof(VALUE_T));                                           \
-		for (auto i = 0; i < sizeof(VALUE_T); ++i)                                                 \
-		{                                                                                          \
-			m_data.emplace_back(static_cast<std::uint8_t>((VALUE) >> sizeof(std::uint8_t) * i * 8)); \
-		}                                                                                          \
-		return *this;                                                                              \
-	} // namespace Common::Network
-
 	auto MessageData::operator<<(const std::uint16_t value) -> MessageData&
 	{
 		PACK_MULTIPLE(std::uint16_t, value);
+		return *this;
 	}
 
 	auto MessageData::operator<<(const std::uint32_t value) -> MessageData&
 	{
 		PACK_MULTIPLE(std::uint32_t, value);
+		return *this;
 	}
 
 	auto MessageData::operator<<(const std::uint64_t value) -> MessageData&
 	{
 		PACK_MULTIPLE(std::uint64_t, value);
+		return *this;
 	}
 
 	auto MessageData::operator<<(const float value) -> MessageData&
 	{
+		// Should be true by definition but doesn't hurt to check
+		static_assert(sizeof(float) == sizeof(std::uint32_t));
 		const auto tempValue = *reinterpret_cast<const std::uint32_t*>(&value);
-
-		PACK_MULTIPLE(std::uint32_t, tempValue);
+		return operator<<(tempValue);
 	}
 
 	auto MessageData::operator<<(const double value) -> MessageData&
 	{
+		// Should be true by definition but doesn't hurt to check
+		static_assert(sizeof(double) == sizeof(std::uint64_t));
 		const auto tempValue = *reinterpret_cast<const std::uint64_t*>(&value);
-
-		PACK_MULTIPLE(std::uint64_t, tempValue);
+		return operator<<(tempValue);
 	}
 
 	auto MessageData::operator<<(entt::entity value) -> MessageData&
 	{
 		static_assert(sizeof(std::uint32_t) == sizeof(entt::entity));
-		return operator<<(static_cast<std::uint32_t>(value));
+		const auto tempValue = static_cast<std::uint32_t>(value);
+		return operator<<(tempValue);
 	}
-
-#undef PACK_MULTIPLE
-
 
 	auto MessageData::operator>>(bool& value) -> MessageData&
 	{
-		value = !(m_data.at(m_readHead) != 0xFF);
+		value = static_cast<bool>(m_data.at(m_readHead));
 		m_readHead += 1;
 		return *this;
 	}
@@ -81,79 +96,56 @@ namespace Common::Network
 		return *this;
 	}
 
-#define UNPACK_MULTIPLE(VALUE_T, VALUE)                                                           \
-	{                                                                                               \
-		using value_t         = VALUE_T;                                                              \
-		value                 = 0;                                                                    \
-		auto packedValueCount = (sizeof(value_t) / sizeof(std::uint8_t));                             \
-		for (auto i = 0; i < packedValueCount; ++i)                                                   \
-		{                                                                                             \
-			value |= static_cast<value_t>(m_data.at(m_readHead + i)) << (sizeof(std::uint8_t) * i * 8); \
-		}                                                                                             \
-		m_readHead += packedValueCount;                                                               \
-		return *this;                                                                                 \
-	} // namespace Common::Network
 
 	auto MessageData::operator>>(std::uint16_t& value) -> MessageData&
 	{
 		UNPACK_MULTIPLE(std::uint16_t, value)
+		return *this;
 	}
 
 	auto MessageData::operator>>(std::uint32_t& value) -> MessageData&
 	{
 		UNPACK_MULTIPLE(std::uint32_t, value)
+		return *this;
 	}
 
 	auto MessageData::operator>>(std::uint64_t& value) -> MessageData&
 	{
 		UNPACK_MULTIPLE(std::uint64_t, value)
+		return *this;
 	}
 
 	auto MessageData::operator>>(float& value) -> MessageData&
 	{
-		using value_t         = std::uint32_t;
-		value_t tempValue     = 0x0000;
-		auto packedValueCount = (sizeof(value_t) / sizeof(std::uint8_t));
-		for (auto i = 0; i < packedValueCount; ++i)
-		{
-			tempValue |= static_cast<value_t>(m_data.at(m_readHead + i)) << sizeof(std::uint8_t) * i;
-		}
+		using value_t = std::uint32_t;
+		static_assert(sizeof(value_t) == sizeof(float));
 
-		m_readHead += packedValueCount;
+		value_t tempValue = 0x0000;
+		UNPACK_MULTIPLE(value_t, tempValue)
 		value = *reinterpret_cast<float*>(&tempValue);
 		return *this;
 	}
 
 	auto MessageData::operator>>(double& value) -> MessageData&
 	{
-		using value_t         = std::uint64_t;
-		value_t tempValue     = 0x0000;
-		auto packedValueCount = (sizeof(value_t) / sizeof(std::uint8_t));
-		for (auto i = 0; i < packedValueCount; ++i)
-		{
-			tempValue |= static_cast<value_t>(m_data.at(m_readHead + i)) << sizeof(std::uint8_t) * i;
-		}
+		using value_t = std::uint64_t;
+		static_assert(sizeof(value_t) == sizeof(double));
 
-		m_readHead += packedValueCount;
-		value = *reinterpret_cast<float*>(&tempValue);
+		value_t tempValue = 0x0000;
+		UNPACK_MULTIPLE(value_t, tempValue);
+		value = *reinterpret_cast<double*>(&tempValue);
 		return *this;
 	}
 
 	auto MessageData::operator>>(entt::entity& value) -> MessageData&
 	{
 		static_assert(sizeof(std::uint32_t) == sizeof(entt::entity));
-		auto temp             = std::uint32_t(0);
-		auto packedValueCount = (sizeof(std::uint32_t) / sizeof(std::uint8_t));
-		for (auto i = 0; i < packedValueCount; ++i)
-		{
-			temp |= static_cast<std::uint32_t>(m_data.at(m_readHead + i)) << sizeof(std::uint8_t) * i;
-		}
-		m_readHead += packedValueCount;
-		value = static_cast<entt::entity>(temp);
+
+		auto tempValue = std::uint32_t(0);
+		UNPACK_MULTIPLE(std::uint32_t, tempValue)
+		value = static_cast<entt::entity>(tempValue);
 		return *this;
 	}
-
-#undef UNPACK_MULTIPLE
 
 	auto MessageData::size() const -> std::size_t
 	{
@@ -177,3 +169,6 @@ namespace Common::Network
 
 
 } // namespace Common::Network
+
+#undef PACK_MULTIPLE
+#undef UNPACK_MULTIPLE
