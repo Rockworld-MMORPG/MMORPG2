@@ -5,7 +5,7 @@
 namespace Common::Game
 {
 
-	struct WorldEntityType : Network::SerialisedComponent<WorldEntityType>
+	struct COMMON_API WorldEntityType : Network::SerialisedComponent<WorldEntityType>
 	{
 		std::uint32_t type = 0;
 

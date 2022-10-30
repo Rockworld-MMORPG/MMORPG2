@@ -6,7 +6,7 @@
 namespace Common::Game
 {
 
-	struct WorldPosition : public Network::SerialisedComponent<WorldPosition>
+	struct COMMON_API WorldPosition : public Network::SerialisedComponent<WorldPosition>
 	{
 		std::uint32_t instanceID = 0;
 		sf::Vector2f position;
