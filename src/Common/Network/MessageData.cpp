@@ -1,6 +1,4 @@
 #include "Common/Network/MessageData.hpp"
-#include <cstdint>
-
 
 #define PACK_MULTIPLE(VALUE_T, VALUE)                                                          \
 	{                                                                                            \

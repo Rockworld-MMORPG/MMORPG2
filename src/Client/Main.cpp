@@ -1,7 +1,6 @@
 #include "Engine/Engine.hpp"
 #include "Game/Game.hpp"
 #include "Version.hpp"
-#include <spdlog/spdlog.h>
 
 
 using namespace Client;

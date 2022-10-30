@@ -1,6 +1,4 @@
 #include "Input/InputManager.hpp"
-#include "Common/Input/ActionType.hpp"
-#include "SFML/System/Time.hpp"
 
 namespace Client
 {

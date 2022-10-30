@@ -1,11 +1,4 @@
 #include "Server.hpp"
-#include <Common/Game/WorldEntityType.hpp>
-#include <Common/Game/WorldPosition.hpp>
-#include <Common/Input.hpp>
-#include <SFML/System/Sleep.hpp>
-#include <SFML/System/Time.hpp>
-#include <spdlog/spdlog.h>
-#include <thread>
 
 namespace Server
 {

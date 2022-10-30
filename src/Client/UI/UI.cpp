@@ -1,18 +1,5 @@
 #include "UI/UI.hpp"
-#include "SFML/Graphics/Drawable.hpp"
-#include "SFML/Graphics/Transform.hpp"
-#include "SFML/Window/Mouse.hpp"
-#include <SFML/Graphics/CircleShape.hpp>
-#include <SFML/Graphics/RectangleShape.hpp>
-#include <SFML/Graphics/RenderTarget.hpp>
-#include <SFML/Graphics/Sprite.hpp>
-#include <SFML/Graphics/Text.hpp>
-#include <SFML/System/Vector2.hpp>
-#include <SFML/Window/Event.hpp>
-#include <entt/core/hashed_string.hpp>
-#include <entt/entity/registry.hpp>
 #include <map>
-#include <spdlog/spdlog.h>
 
 using entt::operator""_hs;
 

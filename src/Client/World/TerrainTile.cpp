@@ -1,6 +1,4 @@
 #include "TerrainTile.hpp"
-#include "SFML/Graphics/Color.hpp"
-#include <SFML/Graphics/RenderTarget.hpp>
 
 namespace Client::World
 {

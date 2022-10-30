@@ -1,9 +1,5 @@
 #include "Engine/Engine.hpp"
 #include "Engine/State.hpp"
-#include <SFML/Window/Event.hpp>
-#include <SFML/Window/VideoMode.hpp>
-#include <spdlog/spdlog.h>
-
 
 namespace Client
 {

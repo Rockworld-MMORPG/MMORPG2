@@ -1,5 +1,4 @@
 #include "Common/World/Level.hpp"
-#include <spdlog/spdlog.h>
 
 namespace Common::World
 {

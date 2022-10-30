@@ -13,6 +13,9 @@ if(MMORPG_USE_MOLD_LINKER)
   add_link_options(-fuse-ld=mold)
 endif()
 
+# Export compile_commands.json
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Add CMake functions
 include(cmake/GetHash.cmake)
 
