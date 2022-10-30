@@ -1,5 +1,4 @@
 #include "World/TerrainRenderer.hpp"
-#include <SFML/Graphics/RenderTarget.hpp>
 
 namespace Client::World
 {

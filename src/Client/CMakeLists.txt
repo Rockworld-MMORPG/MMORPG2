@@ -23,6 +23,8 @@ target_include_directories(
 target_link_libraries(client PRIVATE common SFML::Graphics SFML::Audio nlohmann_json::nlohmann_json)
 target_compile_features(client PRIVATE cxx_std_20)
 
+target_precompile_headers(client PRIVATE PCH.hpp)
+
 set(CLIENT_VERSION_MAJOR 0)
 set(CLIENT_VERSION_MINOR 1)
 set(CLIENT_VERSION_PATCH 0)

@@ -1,14 +1,5 @@
 #include "NetworkManager.hpp"
-#include "Common/Network/Message.hpp"
-#include "Common/Network/MessageData.hpp"
-#include "Common/Network/MessageQueue.hpp"
-#include "Common/Network/Protocol.hpp"
-#include "SFML/System/Time.hpp"
-#include "spdlog/fmt/bundled/format.h"
-#include <Common/Network/MessageType.hpp>
-#include <Common/Network/ServerProperties.hpp>
 #include <array>
-#include <spdlog/spdlog.h>
 #include <thread>
 
 namespace Client

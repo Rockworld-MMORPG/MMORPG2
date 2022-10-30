@@ -1,12 +1,5 @@
 #include "Network/NetworkManager.hpp"
-#include "Common/Network/MessageData.hpp"
-#include "SFML/System/Time.hpp"
 #include "Server/Server.hpp"
-#include <Common/Network/Message.hpp>
-#include <Common/Network/ServerProperties.hpp>
-#include <SFML/Network/UdpSocket.hpp>
-#include <functional>
-#include <spdlog/spdlog.h>
 
 namespace Server
 {

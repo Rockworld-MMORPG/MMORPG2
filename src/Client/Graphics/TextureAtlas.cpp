@@ -1,7 +1,4 @@
 #include "Graphics/TextureAtlas.hpp"
-#include <SFML/OpenGL.hpp>
-#include <cstddef>
-#include <spdlog/spdlog.h>
 
 namespace Client::Graphics
 {

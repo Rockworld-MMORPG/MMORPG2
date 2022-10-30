@@ -1,26 +1,11 @@
 #include "Game/Game.hpp"
-#include "Common/Network/Protocol.hpp"
 #include "Engine/Engine.hpp"
 #include "Graphics/TextureAtlas.hpp"
 #include "Network/NetworkManager.hpp"
 #include "UI/UI.hpp"
-#include <Common/Game/WorldEntityType.hpp>
-#include <Common/Game/WorldPosition.hpp>
-#include <Common/Input.hpp>
-#include <Common/Network.hpp>
-#include <Common/World.hpp>
-#include <SFML/Graphics/RenderStates.hpp>
-#include <SFML/Graphics/RenderTarget.hpp>
-#include <SFML/Graphics/Sprite.hpp>
-#include <SFML/System/Time.hpp>
-#include <SFML/System/Vector2.hpp>
-#include <SFML/Window/Event.hpp>
-#include <SFML/Window/Keyboard.hpp>
-#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
-#include <spdlog/spdlog.h>
 
 namespace Client::Game
 {

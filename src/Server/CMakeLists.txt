@@ -7,6 +7,8 @@ target_include_directories(
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PUBLIC ${mmorpg_SOURCE_DIR}/include)
 
+target_precompile_headers(server PRIVATE PCH.hpp)
+
 set(SERVER_VERSION_MAJOR 0)
 set(SERVER_VERSION_MINOR 1)
 set(SERVER_VERSION_PATCH 0)
