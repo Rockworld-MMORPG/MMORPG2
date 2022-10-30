@@ -1,10 +1,9 @@
 #pragma once
 
-#include "Common/Network/Message.hpp"
-#include "Common/Network/MessageType.hpp"
 #include "Network/NetworkManager.hpp"
 #include "Shell/CommandShell.hpp"
 #include "entt/entity/fwd.hpp"
+#include <Common/Network.hpp>
 #include <SFML/System/Clock.hpp>
 #include <entt/entity/registry.hpp>
 

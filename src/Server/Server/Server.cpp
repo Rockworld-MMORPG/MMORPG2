@@ -1,12 +1,7 @@
 #include "Server.hpp"
-#include "Common/Input/ActionType.hpp"
-#include "Common/Network/Message.hpp"
-#include "Common/Network/MessageData.hpp"
-#include "Common/Network/MessageType.hpp"
-#include "Common/Network/Protocol.hpp"
-#include "Game/Player.hpp"
-#include <Common/Input/Action.hpp>
-#include <Common/Input/InputState.hpp>
+#include <Common/Game/WorldEntityType.hpp>
+#include <Common/Game/WorldPosition.hpp>
+#include <Common/Input.hpp>
 #include <SFML/System/Sleep.hpp>
 #include <SFML/System/Time.hpp>
 #include <spdlog/spdlog.h>
@@ -22,11 +17,11 @@ namespace Server
 	{
 		auto fDt = deltaTime.asSeconds();
 
-		auto view = server.registry.view<Game::Player, Common::Input::InputState>();
+		auto view = server.registry.view<Common::Game::WorldPosition, Common::Input::InputState>();
 		for (const auto entity : view)
 		{
-			auto& playerComponent = server.registry.get<Game::Player>(entity);
-			auto& inputComponent  = server.registry.get<Common::Input::InputState>(entity);
+			auto& worldPositionComponent = server.registry.get<Common::Game::WorldPosition>(entity);
+			auto& inputComponent         = server.registry.get<Common::Input::InputState>(entity);
 
 			sf::Vector2f delta{0.0F, 0.0F};
 			if (inputComponent.forwards)
@@ -46,13 +41,13 @@ namespace Server
 				delta.x += 200.0F * fDt;
 			}
 
-			playerComponent.position += delta;
+			worldPositionComponent.position += delta;
 		}
 	}
 
 	SYSTEM_FN(BroadcastMovement)
 	{
-		for (const auto entity : server.registry.view<Game::Player, Common::Input::InputState>())
+		for (const auto entity : server.registry.view<Common::Game::WorldPosition, Common::Input::InputState>())
 		{
 			auto& inputState = server.registry.get<Common::Input::InputState>(entity);
 			if (inputState.changed)
@@ -89,19 +84,23 @@ namespace Server
 
 	HANDLER_FN(CreateEntity)
 	{
-		if (server.registry.all_of<Game::Player>(message.header.entityID))
+		if (server.registry.all_of<Common::Game::WorldPosition>(message.header.entityID))
 		{
 			return;
 		}
 
 		spdlog::debug("Creating a player for {}", static_cast<std::uint32_t>(message.header.entityID));
 
-		auto& player = server.registry.emplace<Game::Player>(message.header.entityID);
+		auto& worldPosition = server.registry.emplace<Common::Game::WorldPosition>(message.header.entityID);
 		server.registry.emplace<Common::Input::InputState>(message.header.entityID);
+
+		auto& worldEntityType = server.registry.emplace<Common::Game::WorldEntityType>(message.header.entityID);
+		worldEntityType.type  = 0;
 
 		auto data = Common::Network::MessageData();
 		data << message.header.entityID;
-		player.serialise(data);
+		worldEntityType.serialise(data);
+		worldPosition.serialise(data);
 		server.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Server_CreateEntity, data);
 	}
 
@@ -144,6 +143,37 @@ namespace Server
 		}
 	}
 
+	HANDLER_FN(GetWorldState)
+	{
+		auto tileIdentifier = std::uint32_t(0);
+		message.data >> tileIdentifier;
+
+		// Emplace the count at position 0, then serialise entities into it
+		auto data       = Common::Network::MessageData();
+		auto entityList = std::vector<entt::entity>();
+
+		for (const auto entity : server.registry.view<Common::Game::WorldPosition>())
+		{
+			auto& worldPositionComponent = server.registry.get<Common::Game::WorldPosition>(entity);
+			if (worldPositionComponent.instanceID == tileIdentifier)
+			{
+				entityList.emplace_back(entity);
+			}
+		}
+
+		data << std::uint32_t(entityList.size());
+		for (const auto entity : entityList)
+		{
+			auto& worldPositionComponent   = server.registry.get<Common::Game::WorldPosition>(entity);
+			auto& worldEntityTypeComponent = server.registry.get<Common::Game::WorldEntityType>(entity);
+			data << entity;
+			worldEntityTypeComponent.serialise(data);
+			worldPositionComponent.serialise(data);
+		}
+
+		server.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Server_WorldState, data);
+	}
+
 
 #undef SYSTEM_FN
 #undef HANDLER_FN
@@ -165,6 +195,7 @@ namespace Server
 
 		addMessageHandler(MT::Client_Spawn, handlerCreateEntity);
 		addMessageHandler(MT::Client_Action, handlerAction);
+		addMessageHandler(MT::Client_GetWorldState, handlerGetWorldState);
 
 		commandShell.registerCommand("terminate", [&](std::vector<std::string> tokens) {
 			m_serverShouldExit = true;
