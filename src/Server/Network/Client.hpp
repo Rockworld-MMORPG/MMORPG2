@@ -6,6 +6,10 @@
 namespace Server
 {
 
+	/**
+	 * \struct Client Client.hpp "Network/Client.hpp"
+	 * \brief Contains the data used to communicate with a client
+	 */
 	struct Client
 	{
 		std::unique_ptr<sf::TcpSocket> tcpSocket = nullptr;

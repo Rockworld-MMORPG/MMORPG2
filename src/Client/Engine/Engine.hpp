@@ -55,7 +55,6 @@ namespace Client
 		/**
 		 * \brief Sets whether or not the game should stop running the main loop
 		 *
-		 * \param shouldExit
 		 */
 		auto setShouldExit(bool shouldExit) -> void;
 
