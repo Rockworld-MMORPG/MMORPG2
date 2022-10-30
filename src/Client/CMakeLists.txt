@@ -6,6 +6,7 @@ target_sources(
   PRIVATE Main.cpp
           Version.cpp
           Discord/DiscordManager.cpp
+          Discord/Secrets.cpp
           Network/NetworkManager.cpp
           Engine/Engine.cpp
           Game/Game.cpp
@@ -52,7 +53,12 @@ set(CLIENT_VERSION_PATCH 0)
 
 set_target_properties(client PROPERTIES VERSION ${CLIENT_VERSION_MAJOR}.${CLIENT_VERSION_MINOR}.${CLIENT_VERSION_PATCH}
                                         SOVERSION ${CLIENT_VERSION_MAJOR})
+
+set(CLIENT_DISCORD_APPLICATION_ID $ENV{DISCORD_APPLICATION_ID})
+set(CLIENT_DISCORD_CLIENT_ID $ENV{DISCORD_CLIENT_ID})
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Version.cpp.in ${CMAKE_CURRENT_SOURCE_DIR}/Version.cpp)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Discord/Secrets.cpp.in ${CMAKE_CURRENT_SOURCE_DIR}/Discord/Secrets.cpp)
 
 add_custom_command(
   TARGET client

@@ -1,14 +1,11 @@
 #include "Discord/DiscordManager.hpp"
-#include "types.h"
+#include "Discord/Secrets.hpp"
 #include <cstdint>
 #include <discord.h>
 #include <spdlog/spdlog.h>
 
 namespace Client
 {
-
-	const auto CLIENT_ID      = discord::ClientId(0);
-	const auto APPLICATION_ID = std::int64_t(0);
 
 	auto DiscordManager::get() -> DiscordManager&
 	{
@@ -91,7 +88,7 @@ namespace Client
 	DiscordManager::DiscordManager()
 	{
 		discord::Core* core = nullptr;
-		auto errorCode      = discord::Core::Create(CLIENT_ID, static_cast<std::uint64_t>(discord::CreateFlags::NoRequireDiscord), &core);
+		auto errorCode      = discord::Core::Create(Discord::getClientID(), static_cast<std::uint64_t>(discord::CreateFlags::NoRequireDiscord), &core);
 		if (errorCode != discord::Result::Ok)
 		{
 			spdlog::warn("Failed to create a Discord core (error code {})", static_cast<std::uint32_t>(errorCode));
