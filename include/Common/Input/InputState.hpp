@@ -6,6 +6,10 @@
 namespace Common::Input
 {
 
+	/**
+	 * \struct InputState InputState.hpp <Common/Input/InputState.hpp>
+	 * \brief The state of a client's inputs
+	 */
 	struct InputState
 	{
 		bool forwards, backwards, left, right;

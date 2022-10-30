@@ -6,6 +6,10 @@
 namespace Common::Game
 {
 
+	/**
+	 * \struct WorldPosition WorldPosition.hpp <Common/Game/WorldPosition.hpp>
+	 * \brief Data about the position of a world entity within the world space
+	 */
 	struct COMMON_API WorldPosition : public Network::SerialisedComponent<WorldPosition>
 	{
 		std::uint32_t instanceID = 0;

@@ -7,6 +7,10 @@
 namespace Common::World
 {
 
+	/**
+	 * \struct Tile Tile.hpp <Common/World/Tile.hpp>
+	 * \brief Data representing a type of tile in the world space
+	 */
 	struct Tile
 	{
 		enum class TravelMode : std::uint8_t

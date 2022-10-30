@@ -7,10 +7,16 @@ project(
 enable_testing()
 
 option(MMORPG_USE_MOLD_LINKER "Force use the mold linker instead of the system default" OFF)
+option(MMORPG_GENERATE_DOCS "Generate documentation" OFF)
 
 if(MMORPG_USE_MOLD_LINKER)
   # Use mold to link because it's far faster
   add_link_options(-fuse-ld=mold)
+endif()
+
+if(MMORPG_GENERATE_DOCS)
+  find_package(Doxygen REQUIRED)
+  doxygen_add_docs(documentation src/ include/)
 endif()
 
 # Export compile_commands.json

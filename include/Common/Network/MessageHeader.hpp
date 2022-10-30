@@ -8,6 +8,11 @@
 namespace Common::Network
 {
 
+	/**
+	 * \struct MessageHeader MessageHeader.hpp <Common/Network/MessageHeader.hpp>
+	 * \brief The data required to send a message over the network
+	 *
+	 */
 	struct MessageHeader
 	{
 		entt::entity entityID    = entt::null;

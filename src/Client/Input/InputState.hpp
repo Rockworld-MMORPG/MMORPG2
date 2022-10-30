@@ -5,6 +5,10 @@
 namespace Client::Input
 {
 
+	/**
+	 * \struct InputState InputState.hpp "Input/InputState.hpp"
+	 * \brief Data representing the state of an input
+	 */
 	struct InputState
 	{
 		bool isPressed = false;
