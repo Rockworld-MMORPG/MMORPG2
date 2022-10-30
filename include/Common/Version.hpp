@@ -14,7 +14,7 @@ namespace Common::Version
 	/// \brief Get the patch version of the common library
 	auto getPatch() -> std::uint32_t;
 
-	/// \brief Get the git short hash of the commit the common library was build with
+	/// \brief Get the git short hash of the commit the common library was built with
 	auto getCommit() -> std::uint32_t;
 
 } // namespace Common::Version
