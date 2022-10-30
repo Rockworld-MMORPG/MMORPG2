@@ -7,6 +7,11 @@
 namespace Common::Input
 {
 
+	/**
+	 * \struct Action Action.hpp
+	 * \brief An action performed by a client
+	 *
+	 */
 	struct Action
 	{
 		ActionType type;

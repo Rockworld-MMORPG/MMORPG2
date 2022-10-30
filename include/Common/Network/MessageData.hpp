@@ -8,6 +8,11 @@
 namespace Common::Network
 {
 
+	/**
+	 * \struct MessageData MessageData.hpp <Common/Network/MessageData.hpp>
+	 * \brief Allows for data of any type to be conveniently bundled into a vector of bytes
+	 *
+	 */
 	class COMMON_API MessageData
 	{
 	public:
@@ -31,9 +36,26 @@ namespace Common::Network
 		auto operator>>(double& value) -> MessageData&;
 		auto operator>>(entt::entity& value) -> MessageData&;
 
+		/**
+		 * \brief Gets the size of the contained data
+		 */
 		[[nodiscard]] auto size() const -> std::size_t;
+
+		/**
+		 * \brief Gets a const void pointer to the contained data
+		 */
 		[[nodiscard]] auto data() const -> const void*;
+
+		/**
+		 * \brief Gets a void pointer to the contained data
+		 */
 		[[nodiscard]] auto data() -> void*;
+
+		/**
+		 * \brief Resizes the message data
+		 *
+		 * \param newSize The new size of the message data
+		 */
 		auto resize(std::size_t newSize) -> void;
 
 	private:
