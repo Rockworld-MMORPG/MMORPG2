@@ -14,14 +14,18 @@ namespace Common::Network
 		None,
 		Command,
 
+		Client_PublicKey,
 		Client_Connect,
 		Client_Disconnect,
+		Client_Authenticate,
 		Client_GetClientID,
 		Client_Spawn,
 		Client_Action,
 		Client_InputState,
 		Client_GetWorldState,
 
+		Server_PublicKey,
+		Server_Authenticate,
 		Server_SetClientID,
 		Server_Disconnect,
 		Server_CreateEntity,
