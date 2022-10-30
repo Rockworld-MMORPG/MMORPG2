@@ -16,7 +16,7 @@ namespace Server
 	using SystemFunction         = std::function<void(Server& server, sf::Time deltaTime)>;
 
 	/**
-	 * \class Server Server.hpp "Server/Server.hpp"
+	 * \class Server::Server Server.hpp "Server/Server.hpp"
 	 * \brief Manages and updates the global state of the server
 	 */
 	class Server
