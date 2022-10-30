@@ -26,6 +26,13 @@ namespace Common::Network
 		[[nodiscard]] auto pack() const -> std::vector<std::uint8_t>;
 
 		/**
+		 * \brief Unpacks a byte vector into the message
+		 *
+		 * \param buffer The byte vector to unpack
+		 */
+		auto unpack(std::vector<std::uint8_t>& buffer) -> void;
+
+		/**
 		 * \brief Unpacks a byte array of length MAX_MESSAGE_LENGTH into the message
 		 *
 		 * \param buffer The byte array to unpack

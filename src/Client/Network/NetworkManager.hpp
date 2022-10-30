@@ -132,6 +132,8 @@ namespace Client
 		sf::UdpSocket m_udpSocket;
 		sf::TcpSocket m_tcpSocket;
 
+		Common::Network::PublicKeyCryptographer m_cryptographer;
+
 		Common::Network::MessageQueue<Common::Network::Message> m_messageQueue;
 	};
 

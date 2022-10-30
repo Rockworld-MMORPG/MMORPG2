@@ -2,7 +2,6 @@
 #include "Game/Game.hpp"
 #include "Version.hpp"
 
-
 using namespace Client;
 
 auto main(int /* argc */, char** argv) -> int

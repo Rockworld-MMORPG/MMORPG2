@@ -9,6 +9,7 @@ target_sources(
           Game/WorldEntityType.cpp
           Input/Action.cpp
           Input/InputState.cpp
+          Network/Crypto.cpp
           Network/Message.cpp
           Network/MessageData.cpp
           Network/MessageType.cpp
@@ -20,7 +21,7 @@ target_include_directories(
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PUBLIC ${mmorpg_SOURCE_DIR}/include)
 
-target_link_libraries(common PUBLIC SFML::Network EnTT::EnTT spdlog::spdlog IMPORTED OpenSSL::Crypto)
+target_link_libraries(common PUBLIC SFML::Network EnTT::EnTT spdlog::spdlog OpenSSL::Crypto)
 target_compile_features(common PRIVATE cxx_std_20)
 target_compile_definitions(
   common PRIVATE _EXPORT_COMMON=TRUE

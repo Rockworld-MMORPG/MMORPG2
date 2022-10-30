@@ -305,6 +305,8 @@ namespace Server
 		std::uint16_t remotePort    = client.udpPort;
 
 		auto buffer = message.pack();
+		m_cryptographer.encrypt(buffer);
+
 		auto status = m_udpSocket.send(buffer.data(), buffer.size(), remoteAddress, remotePort);
 
 		switch (status)
@@ -331,15 +333,18 @@ namespace Server
 			spdlog::warn("Dropped UDP packet");
 		}
 
-		auto message = Common::Network::Message();
-		message.unpack(buffer, length);
-
-		auto optClientID = resolveClientID(remoteAddress.value(), remotePort);
+		auto optClientID = resolveClientID(*remoteAddress, remotePort);
 		if (!optClientID.has_value())
 		{
-			spdlog::warn("Received a packet from a client without an ID (client sent {})", static_cast<std::uint32_t>(message.header.entityID));
+			spdlog::warn("Received a packet from a client that the server doesn't recognise ({}:{})", remoteAddress->toString(), remotePort);
 			return;
 		}
+
+		auto vBuffer = std::vector<std::uint8_t>(buffer.data(), buffer.data() + length);
+		m_cryptographer.decryptFromRemote(vBuffer);
+
+		auto message = Common::Network::Message();
+		message.unpack(vBuffer);
 
 		if (validateIncomingMessage(*optClientID, message.header))
 		{
@@ -361,8 +366,11 @@ namespace Server
 
 		auto& client = server.registry.get<Client>(message.header.entityID);
 		auto& socket = client.tcpSocket;
-		auto buffer  = message.pack();
-		auto status  = socket->send(buffer.data(), buffer.size());
+
+		auto buffer = message.pack();
+		m_cryptographer.encrypt(buffer);
+
+		auto status = socket->send(buffer.data(), buffer.size());
 		switch (status)
 		{
 			case sf::Socket::Status::Done:
@@ -386,8 +394,11 @@ namespace Server
 		{
 			case sf::Socket::Status::Done:
 			{
+				auto vBuffer = std::vector<std::uint8_t>(buffer.data(), buffer.data() + length);
+				m_cryptographer.decryptFromRemote(vBuffer);
+
 				auto message = Common::Network::Message();
-				message.unpack(buffer, length);
+				message.unpack(vBuffer);
 
 				// Special case because setting ports is hard
 				if (message.header.type == Common::Network::MessageType::Client_Connect)
