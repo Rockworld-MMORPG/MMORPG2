@@ -36,19 +36,15 @@ jobs:
         if: runner.os == 'Linux'
         uses: rui314/setup-mold@v1
 
-      # Install Chocolatey if we're on Windows
-      - name: Install Chocolatey
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-
       # Install dependencies if we're on Windows
       - name: Install Dependencies
         if: runner.os == 'Windows'
-        shell: powershell
-        run: choco install openssl
+        shell: pwsh
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+          choco install openssl
 
-      # Get the dependencies from the cache
+      # Get the build dependencies from the cache
       - name: Cache CMake Dependencies
         uses: actions/cache@v3
         with:
