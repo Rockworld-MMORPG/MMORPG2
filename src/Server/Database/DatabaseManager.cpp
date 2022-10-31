@@ -37,7 +37,7 @@ namespace Server
 		statement.exec();
 	}
 
-	auto DatabaseManager::executeQuery(const std::string& query) -> SQLite::Statement
+	auto DatabaseManager::createQuery(const std::string& query) -> SQLite::Statement
 	{
 		auto statement = SQLite::Statement(m_databaseConnection, query);
 		return statement;

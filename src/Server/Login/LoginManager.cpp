@@ -15,7 +15,7 @@ namespace Server
 	{
 		spdlog::debug("Creating login for {}", username);
 
-		auto query = m_databaseManager.executeQuery("SELECT * from login_data WHERE username=@USERNAME");
+		auto query = m_databaseManager.createQuery("SELECT * from login_data WHERE username=@USERNAME");
 		query.bind("@USERNAME", username);
 
 		if (query.executeStep())
@@ -35,7 +35,7 @@ namespace Server
 
 		auto hashedPassword = hashString(password, salt);
 
-		query = m_databaseManager.executeQuery("INSERT INTO login_data (username, password, salt) VALUES (@USERNAME, @PASSWORD, @SALT)");
+		query = m_databaseManager.createQuery("INSERT INTO login_data (username, password, salt) VALUES (@USERNAME, @PASSWORD, @SALT)");
 		query.bind("@USERNAME", username);
 		query.bind("@PASSWORD", hashedPassword);
 		query.bind("@SALT", salt);
@@ -52,7 +52,7 @@ namespace Server
 	{
 		spdlog::debug("Authenticating user {}", username);
 
-		auto query = m_databaseManager.executeQuery("SELECT salt from login_data WHERE username=@USERNAME");
+		auto query = m_databaseManager.createQuery("SELECT salt from login_data WHERE username=@USERNAME");
 		query.bind("@USERNAME", username);
 
 		const auto* salt = "";
@@ -67,7 +67,7 @@ namespace Server
 
 		auto hashedPassword = hashString(password, salt);
 
-		query = m_databaseManager.executeQuery("SELECT * from login_data where username=@USERNAME and password=@PASSWORD");
+		query = m_databaseManager.createQuery("SELECT * from login_data where username=@USERNAME and password=@PASSWORD");
 		query.bind("@USERNAME", username);
 		query.bind("@PASSWORD", hashedPassword);
 
