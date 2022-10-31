@@ -1,4 +1,6 @@
 #include "Server.hpp"
+#include "Common/Game/WorldEntity.hpp"
+#include <Common/Game.hpp>
 
 namespace Server
 {
@@ -10,10 +12,10 @@ namespace Server
 	{
 		auto fDt = deltaTime.asSeconds();
 
-		auto view = server.registry.view<Common::Game::WorldPosition, Common::Input::InputState>();
+		auto view = server.registry.view<Common::Game::WorldEntityPosition, Common::Input::InputState>();
 		for (const auto entity : view)
 		{
-			auto& worldPositionComponent = server.registry.get<Common::Game::WorldPosition>(entity);
+			auto& worldPositionComponent = server.registry.get<Common::Game::WorldEntityPosition>(entity);
 			auto& inputComponent         = server.registry.get<Common::Input::InputState>(entity);
 
 			sf::Vector2f delta{0.0F, 0.0F};
@@ -40,7 +42,7 @@ namespace Server
 
 	SYSTEM_FN(BroadcastMovement)
 	{
-		for (const auto entity : server.registry.view<Common::Game::WorldPosition, Common::Input::InputState>())
+		for (const auto entity : server.registry.view<Common::Game::WorldEntityPosition, Common::Input::InputState>())
 		{
 			auto& inputState = server.registry.get<Common::Input::InputState>(entity);
 			if (inputState.changed)
@@ -77,23 +79,19 @@ namespace Server
 
 	HANDLER_FN(CreateEntity)
 	{
-		if (server.registry.all_of<Common::Game::WorldPosition>(message.header.entityID))
+		if (server.registry.all_of<Common::Game::WorldEntityPosition>(message.header.entityID))
 		{
 			return;
 		}
 
 		spdlog::debug("Creating a player for {}", static_cast<std::uint32_t>(message.header.entityID));
 
-		auto& worldPosition = server.registry.emplace<Common::Game::WorldPosition>(message.header.entityID);
-		server.registry.emplace<Common::Input::InputState>(message.header.entityID);
-
-		auto& worldEntityType = server.registry.emplace<Common::Game::WorldEntityType>(message.header.entityID);
-		worldEntityType.type  = 0;
+		server.registry.emplace_or_replace<Common::Input::InputState>(message.header.entityID);
+		Common::Game::createWorldEntity(server.registry, message.header.entityID, {});
 
 		auto data = Common::Network::MessageData();
 		data << message.header.entityID;
-		worldEntityType.serialise(data);
-		worldPosition.serialise(data);
+		Common::Game::serialiseWorldEntity(server.registry, message.header.entityID, data);
 		server.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Server_CreateEntity, data);
 	}
 
@@ -145,9 +143,9 @@ namespace Server
 		auto data       = Common::Network::MessageData();
 		auto entityList = std::vector<entt::entity>();
 
-		for (const auto entity : server.registry.view<Common::Game::WorldPosition>())
+		for (const auto entity : server.registry.view<Common::Game::WorldEntityPosition>())
 		{
-			auto& worldPositionComponent = server.registry.get<Common::Game::WorldPosition>(entity);
+			auto& worldPositionComponent = server.registry.get<Common::Game::WorldEntityPosition>(entity);
 			if (worldPositionComponent.instanceID == tileIdentifier)
 			{
 				entityList.emplace_back(entity);
@@ -157,11 +155,8 @@ namespace Server
 		data << std::uint32_t(entityList.size());
 		for (const auto entity : entityList)
 		{
-			auto& worldPositionComponent   = server.registry.get<Common::Game::WorldPosition>(entity);
-			auto& worldEntityTypeComponent = server.registry.get<Common::Game::WorldEntityType>(entity);
 			data << entity;
-			worldEntityTypeComponent.serialise(data);
-			worldPositionComponent.serialise(data);
+			Common::Game::serialiseWorldEntity(server.registry, entity, data);
 		}
 
 		server.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Server_WorldState, data);

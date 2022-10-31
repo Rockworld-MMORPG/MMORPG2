@@ -5,8 +5,11 @@ find_package(OpenSSL 1.1 REQUIRED)
 
 target_sources(
   common
-  PRIVATE Game/WorldPosition.cpp
+  PRIVATE Game/WorldEntityPosition.cpp
           Game/WorldEntityType.cpp
+          Game/WorldEntityName.cpp
+          Game/WorldEntityStats.cpp
+          Game/WorldEntity.cpp
           Input/Action.cpp
           Input/InputState.cpp
           Network/Crypto.cpp

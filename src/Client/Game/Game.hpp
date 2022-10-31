@@ -88,6 +88,8 @@ namespace Client::Game
 		Graphics::TextureAtlas m_textureAtlas;
 
 		UI::UIRenderer m_uiRenderer;
+		entt::entity m_healthTextEntity;
+		entt::entity m_magicTextEntity;
 
 		sf::View m_camera;
 
