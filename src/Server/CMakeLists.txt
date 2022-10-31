@@ -27,5 +27,5 @@ set_target_properties(
                            SOVERSION ${SERVER_VERSION_MAJOR})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Version.cpp.in ${CMAKE_CURRENT_SOURCE_DIR}/Version.cpp)
 
-target_link_libraries(mmorpg-server PRIVATE MMORPG::Common Argon2::Argon2-Hpp SQLiteCpp)
+target_link_libraries(mmorpg-server PRIVATE MMORPG::Common Argon2::Argon2-Hpp SQLiteCpp sqlite3)
 target_compile_features(mmorpg-server PRIVATE cxx_std_20)
