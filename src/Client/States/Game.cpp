@@ -14,6 +14,13 @@ namespace Client::States
 	    State(engine),
 	    m_textureAtlas(sf::Vector2u(32, 32), sf::Vector2u(32, 32))
 	{
+		if (!engine.networkManager.isConnected())
+		{
+			spdlog::warn("Exiting game state - not connected");
+			engine.setShouldPopState(true);
+			return;
+		}
+
 		engine.assetManager.loadAsset("levels/test_level.dat", "test_level");
 		engine.assetManager.loadAsset("textures/player.png", "player");
 		engine.assetManager.loadAsset("OpenSans-Regular.ttf", "font");
@@ -76,27 +83,9 @@ namespace Client::States
 		UI::createElement(m_registry, "image_portrait", 0, UI::ImageCreateInfo{sf::Vector2f(10.0F, 10.0F), sf::Vector2f(16.0F, 16.0F), m_playerTexture});
 		m_healthTextEntity = UI::createElement(m_registry, "text_health", 0, UI::TextCreateInfo{sf::Vector2f(100.0F, 10.0F), m_font, "Health [ 100 / 100 ]", 20});
 		m_magicTextEntity  = UI::createElement(m_registry, "text_power", 0, UI::TextCreateInfo{sf::Vector2f(101.0F, 35.0F), m_font, "Power [ 100 / 100 ]", 20});
-		UI::createElement(m_registry, "button_connect", 0, UI::RectButtonCreateInfo{sf::Vector2f(10.0F, 670.0F), sf::Vector2f(100.0F, 40.0F), "Connect", m_font, {}, [&](sf::Mouse::Button b) {
-			                                                                            if (engine.networkManager.isConnected()) { return; }
-			                                                                            engine.networkManager.connect();
-			                                                                            if (engine.networkManager.isConnected())
-			                                                                            {
-				                                                                            auto data = Common::Network::MessageData();
-				                                                                            engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Client_Spawn, data);
-
-				                                                                            // TODO - change this to the actual tile identifier
-				                                                                            data = Common::Network::MessageData();
-				                                                                            data << std::uint32_t(0);
-				                                                                            engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Client_GetWorldState, data);
-			                                                                            }
-		                                                                            }});
-		UI::createElement(m_registry, "button_disconnect", 0, UI::RectButtonCreateInfo{sf::Vector2f(120.0F, 670.0F), sf::Vector2f(100.0F, 40.0F), "Disconnect", m_font, {}, [&](sf::Mouse::Button b) {
-			                                                                               if (!engine.networkManager.isConnected()) { return; }
+		UI::createElement(m_registry, "button_disconnect", 0, UI::RectButtonCreateInfo{sf::Vector2f(10.0F, 670.0F), sf::Vector2f(100.0F, 40.0F), "Disconnect", m_font, {}, [&](sf::Mouse::Button b) {
 			                                                                               engine.networkManager.disconnect();
-			                                                                               for (const auto entity : m_registry.view<entt::entity>())
-			                                                                               {
-				                                                                               m_registry.destroy(entity);
-			                                                                               }
+			                                                                               engine.setShouldPopState();
 		                                                                               }});
 
 		UI::createElement(m_registry, "test_text_input", 0, UI::TextInputCreateInfo{sf::Vector2f(10.0F, 640.0F), 32, UI::TextInputCreateInfo::NO_MASKING, 16, m_font});
@@ -110,6 +99,14 @@ namespace Client::States
 		m_level               = Common::World::Level(testLevel);
 
 		m_terrainRenderer.addLevel(entt::hashed_string("test_level").value(), m_level, m_textureAtlas);
+
+		auto data = Common::Network::MessageData();
+		engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Client_Spawn, data);
+
+		// TODO - change this to the actual tile identifier
+		data = Common::Network::MessageData();
+		data << std::uint32_t(0);
+		engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Client_GetWorldState, data);
 	}
 
 	Game::~Game()
@@ -283,6 +280,13 @@ namespace Client::States
 
 	auto Game::update(const sf::Time deltaTime) -> void
 	{
+		if (!engine.networkManager.isConnected())
+		{
+			spdlog::warn("Exiting game state - not connected");
+			engine.setShouldPopState(true);
+			return;
+		}
+
 		UI::update(m_registry, deltaTime);
 
 		auto changedStates = engine.inputManager.getChangedStates();

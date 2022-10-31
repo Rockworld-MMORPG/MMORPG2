@@ -34,17 +34,17 @@ namespace Client
 		auto pushState(std::unique_ptr<State>&& state) -> void;
 
 		/**
-		 * \brief Pops a state from the engine's state stack
-		 *
-		 */
-		auto popState() -> void;
-
-		/**
 		 * \brief Get the state at the top of the engine's state stack
 		 *
 		 * \return State& A reference to the state
 		 */
 		auto getState() -> State&;
+
+		/**
+		 * \brief Sets whether or not the engine should pop the state at the top of the stack
+		 *
+		 */
+		auto setShouldPopState(bool shouldPopState = true) -> void;
 
 		/**
 		 * \brief Runs the game loop until the engine is set to exit
@@ -56,7 +56,7 @@ namespace Client
 		 * \brief Sets whether or not the game should stop running the main loop
 		 *
 		 */
-		auto setShouldExit(bool shouldExit) -> void;
+		auto setShouldExit(bool shouldExit = true) -> void;
 
 		AssetManager assetManager;
 		NetworkManager networkManager;
@@ -64,8 +64,15 @@ namespace Client
 		sf::RenderWindow window;
 
 	private:
+		/**
+		 * \brief Pops a state from the engine's state stack
+		 *
+		 */
+		auto popState() -> void;
+
 		std::stack<std::unique_ptr<State>> m_stateStack;
-		bool m_shouldExit = false;
+		bool m_shouldExit     = false;
+		bool m_shouldPopState = false;
 		sf::Clock m_clock;
 	};
 
