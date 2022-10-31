@@ -1,3 +1,6 @@
+set(SQLITECPP_RUN_CPPLINT OFF)
+set(SQLITECPP_RUN_CPPCHECK OFF)
+
 fetchcontent_declare(
   sqlitecpp
   GIT_REPOSITORY https://github.com/SRombauts/SQLiteCpp.git
