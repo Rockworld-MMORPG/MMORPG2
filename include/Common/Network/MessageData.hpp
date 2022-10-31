@@ -3,6 +3,7 @@
 #include "Common/Export.hpp"
 #include <cstdint>
 #include <entt/entity/entity.hpp>
+#include <string>
 #include <vector>
 
 namespace Common::Network
