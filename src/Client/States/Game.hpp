@@ -10,11 +10,11 @@
 #include <SFML/Graphics/View.hpp>
 #include <entt/entity/registry.hpp>
 
-namespace Client::Game
+namespace Client::States
 {
 
 	/**
-	 * \class Game Game.hpp "Game/Game.hpp"
+	 * \class Game Game.hpp "States/Game.hpp"
 	 * \brief State implementing the main gameplay cycle
 	 */
 	class Game final : public State
@@ -98,4 +98,4 @@ namespace Client::Game
 		sf::Font m_font;
 	};
 
-} // namespace Client::Game
+} // namespace Client::States

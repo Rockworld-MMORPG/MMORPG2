@@ -6,7 +6,7 @@ using entt::operator""_hs;
 namespace Client::UI
 {
 
-	auto createElement(entt::registry& registry, std::string identifier, const Layer layer) -> entt::entity
+	auto createElement(entt::registry& registry, const std::string& identifier, const Layer layer) -> entt::entity
 	{
 		auto entity     = registry.create();
 		auto& data      = registry.emplace<ElementData>(entity);
@@ -26,7 +26,7 @@ namespace Client::UI
 		return entity;
 	}
 
-	auto createElement(entt::registry& registry, std::string identifier, const Layer layer, const ImageCreateInfo createInfo) -> entt::entity
+	auto createElement(entt::registry& registry, const std::string& identifier, const Layer layer, const ImageCreateInfo createInfo) -> entt::entity
 	{
 		auto entity = createElement(registry, identifier, layer);
 
@@ -45,7 +45,7 @@ namespace Client::UI
 		return entity;
 	}
 
-	auto createElement(entt::registry& registry, std::string identifier, const Layer layer, const TextCreateInfo createInfo) -> entt::entity
+	auto createElement(entt::registry& registry, const std::string& identifier, const Layer layer, const TextCreateInfo createInfo) -> entt::entity
 	{
 		auto entity = createElement(registry, identifier, layer);
 
@@ -61,7 +61,7 @@ namespace Client::UI
 		return entity;
 	}
 
-	auto createElement(entt::registry& registry, std::string identifier, const Layer layer, const SliderCreateInfo createInfo) -> entt::entity
+	auto createElement(entt::registry& registry, const std::string& identifier, const Layer layer, const SliderCreateInfo createInfo) -> entt::entity
 	{
 		auto entity = createElement(registry, identifier, layer);
 
@@ -90,7 +90,7 @@ namespace Client::UI
 		return entity;
 	}
 
-	auto createElement(entt::registry& registry, std::string identifier, const Layer layer, const ButtonCreateInfo createInfo) -> entt::entity
+	auto createElement(entt::registry& registry, const std::string& identifier, const Layer layer, const RectButtonCreateInfo createInfo) -> entt::entity
 	{
 		auto entity = createElement(registry, identifier, layer);
 
@@ -128,7 +128,7 @@ namespace Client::UI
 		return entity;
 	}
 
-	auto createElement(entt::registry& registry, std::string identifier, Layer layer, TextInputCreateInfo createInfo) -> entt::entity
+	auto createElement(entt::registry& registry, const std::string& identifier, Layer layer, TextInputCreateInfo createInfo) -> entt::entity
 	{
 		auto entity     = createElement(registry, identifier, layer);
 		auto& data      = registry.get<ElementData>(entity);
@@ -175,7 +175,7 @@ namespace Client::UI
 		return entity;
 	}
 
-	auto destroyElement(entt::registry& registry, std::string identifier) -> void
+	auto destroyElement(entt::registry& registry, const std::string& identifier) -> void
 	{
 		auto hsIdentifier = entt::hashed_string(identifier.c_str(), identifier.size());
 		for (const auto entity : registry.view<ElementData>())

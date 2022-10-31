@@ -1,4 +1,4 @@
-#include "Game/Game.hpp"
+#include "States/Game.hpp"
 #include "Common/Game/WorldEntityStats.hpp"
 #include "Common/Network/MessageData.hpp"
 #include "Engine/Engine.hpp"
@@ -8,7 +8,7 @@
 #include <Common/Game/WorldEntity.hpp>
 #include <nlohmann/json.hpp>
 
-namespace Client::Game
+namespace Client::States
 {
 	Game::Game(Engine& engine) :
 	    State(engine),
@@ -76,30 +76,30 @@ namespace Client::Game
 		UI::createElement(m_registry, "image_portrait", 0, UI::ImageCreateInfo{sf::Vector2f(10.0F, 10.0F), sf::Vector2f(16.0F, 16.0F), m_playerTexture});
 		m_healthTextEntity = UI::createElement(m_registry, "text_health", 0, UI::TextCreateInfo{sf::Vector2f(100.0F, 10.0F), m_font, "Health [ 100 / 100 ]", 20});
 		m_magicTextEntity  = UI::createElement(m_registry, "text_power", 0, UI::TextCreateInfo{sf::Vector2f(101.0F, 35.0F), m_font, "Power [ 100 / 100 ]", 20});
-		UI::createElement(m_registry, "button_connect", 0, UI::ButtonCreateInfo{sf::Vector2f(10.0F, 670.0F), sf::Vector2f(100.0F, 40.0F), "Connect", m_font, {}, [&](sf::Mouse::Button b) {
-			                                                                        if (engine.networkManager.isConnected()) { return; }
-			                                                                        engine.networkManager.connect();
-			                                                                        if (engine.networkManager.isConnected())
-			                                                                        {
-				                                                                        auto data = Common::Network::MessageData();
-				                                                                        engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Client_Spawn, data);
+		UI::createElement(m_registry, "button_connect", 0, UI::RectButtonCreateInfo{sf::Vector2f(10.0F, 670.0F), sf::Vector2f(100.0F, 40.0F), "Connect", m_font, {}, [&](sf::Mouse::Button b) {
+			                                                                            if (engine.networkManager.isConnected()) { return; }
+			                                                                            engine.networkManager.connect();
+			                                                                            if (engine.networkManager.isConnected())
+			                                                                            {
+				                                                                            auto data = Common::Network::MessageData();
+				                                                                            engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Client_Spawn, data);
 
-				                                                                        // TODO - change this to the actual tile identifier
-				                                                                        data = Common::Network::MessageData();
-				                                                                        data << std::uint32_t(0);
-				                                                                        engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Client_GetWorldState, data);
-			                                                                        }
-		                                                                        }});
-		UI::createElement(m_registry, "button_disconnect", 0, UI::ButtonCreateInfo{sf::Vector2f(120.0F, 670.0F), sf::Vector2f(100.0F, 40.0F), "Disconnect", m_font, {}, [&](sf::Mouse::Button b) {
-			                                                                           if (!engine.networkManager.isConnected()) { return; }
-			                                                                           engine.networkManager.disconnect();
-			                                                                           for (const auto entity : m_registry.view<entt::entity>())
-			                                                                           {
-				                                                                           m_registry.destroy(entity);
-			                                                                           }
-		                                                                           }});
+				                                                                            // TODO - change this to the actual tile identifier
+				                                                                            data = Common::Network::MessageData();
+				                                                                            data << std::uint32_t(0);
+				                                                                            engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Client_GetWorldState, data);
+			                                                                            }
+		                                                                            }});
+		UI::createElement(m_registry, "button_disconnect", 0, UI::RectButtonCreateInfo{sf::Vector2f(120.0F, 670.0F), sf::Vector2f(100.0F, 40.0F), "Disconnect", m_font, {}, [&](sf::Mouse::Button b) {
+			                                                                               if (!engine.networkManager.isConnected()) { return; }
+			                                                                               engine.networkManager.disconnect();
+			                                                                               for (const auto entity : m_registry.view<entt::entity>())
+			                                                                               {
+				                                                                               m_registry.destroy(entity);
+			                                                                               }
+		                                                                               }});
 
-		UI::createElement(m_registry, "test_text_input", 0, UI::TextInputCreateInfo{sf::Vector2f(10.0F, 640.0F), sf::Vector2f(250.0F, 20.0F), 16, m_font});
+		UI::createElement(m_registry, "test_text_input", 0, UI::TextInputCreateInfo{sf::Vector2f(10.0F, 640.0F), 32, UI::TextInputCreateInfo::NO_MASKING, 16, m_font});
 
 		engine.inputManager.bindAction(sf::Keyboard::W, Common::Input::ActionType::MoveForward);
 		engine.inputManager.bindAction(sf::Keyboard::A, Common::Input::ActionType::StrafeLeft);
@@ -381,4 +381,4 @@ namespace Client::Game
 		spdlog::debug("Loaded tile {}", static_cast<std::uint32_t>(identifier));
 	}
 
-} // namespace Client::Game
+} // namespace Client::States

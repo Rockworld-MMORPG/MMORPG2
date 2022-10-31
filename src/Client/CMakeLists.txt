@@ -7,10 +7,11 @@ target_sources(
           Version.cpp
           Assets/AssetManager.cpp
           Engine/Engine.cpp
-          Game/Game.cpp
           Graphics/TextureAtlas.cpp
           Input/InputManager.cpp
           Network/NetworkManager.cpp
+          States/Game.cpp
+          States/Login.cpp
           UI/UI.cpp
           World/TerrainTile.cpp
           World/TerrainRenderer.cpp)

@@ -96,10 +96,10 @@ namespace Client::UI
 	};
 
 	/**
-	 * \struct ButtonCreateInfo UI.hpp "UI/UI.hpp"
-	 * \brief Data used to create a Button UI element
+	 * \struct RectButtonCreateInfo UI.hpp "UI/UI.hpp"
+	 * \brief Data used to create a Rectangle Button UI element
 	 */
-	struct ButtonCreateInfo
+	struct RectButtonCreateInfo
 	{
 		sf::Vector2f position;
 		sf::Vector2f size;
@@ -140,7 +140,7 @@ namespace Client::UI
 	 * \param layer The layer to create the UI element on
 	 * \return entt::entity The entity representing the UI element
 	 */
-	auto createElement(entt::registry& registry, std::string identifier, Layer layer) -> entt::entity;
+	auto createElement(entt::registry& registry, const std::string& identifier, Layer layer) -> entt::entity;
 
 	/**
 	 * \brief Create an Image UI Element
@@ -151,7 +151,7 @@ namespace Client::UI
 	 * \param createInfo The data used to create the Image UI element
 	 * \return entt::entity The entity representing the UI element
 	 */
-	auto createElement(entt::registry& registry, std::string identifier, Layer layer, ImageCreateInfo createInfo) -> entt::entity;
+	auto createElement(entt::registry& registry, const std::string& identifier, Layer layer, ImageCreateInfo createInfo) -> entt::entity;
 
 	/**
 	 * \brief Create a Text UI Element
@@ -162,7 +162,7 @@ namespace Client::UI
 	 * \param createInfo The data used to create the Text UI element
 	 * \return entt::entity The entity representing the UI element
 	 */
-	auto createElement(entt::registry& registry, std::string identifier, Layer layer, TextCreateInfo createInfo) -> entt::entity;
+	auto createElement(entt::registry& registry, const std::string& identifier, Layer layer, TextCreateInfo createInfo) -> entt::entity;
 
 	/**
 	 * \brief Create a Slider UI Element
@@ -173,10 +173,10 @@ namespace Client::UI
 	 * \param createInfo The data used to create the Slider UI element
 	 * \return entt::entity The entity representing the UI element
 	 */
-	auto createElement(entt::registry& registry, std::string identifier, Layer layer, SliderCreateInfo createInfo) -> entt::entity;
+	auto createElement(entt::registry& registry, const std::string& identifier, Layer layer, SliderCreateInfo createInfo) -> entt::entity;
 
 	/**
-	 * \brief Create a Button UI Element
+	 * \brief Create a Rectangle Button UI Element
 	 *
 	 * \param registry The registry to create the UI element in
 	 * \param identifier The identifier of the UI element
@@ -184,7 +184,7 @@ namespace Client::UI
 	 * \param createInfo The data used to create the UI element
 	 * \return entt::entity The entity representing the Button UI element
 	 */
-	auto createElement(entt::registry& registry, std::string identifier, Layer layer, ButtonCreateInfo createInfo) -> entt::entity;
+	auto createElement(entt::registry& registry, const std::string& identifier, Layer layer, RectButtonCreateInfo createInfo) -> entt::entity;
 
 	/**
 	 * \brief Create a Text Input UI Element
@@ -195,7 +195,7 @@ namespace Client::UI
 	 * \param createInfo The data used to create the Text Input UI element
 	 * \return entt::entity The entity representing the UI element
 	 */
-	auto createElement(entt::registry& registry, std::string identifier, Layer layer, TextInputCreateInfo createInfo) -> entt::entity;
+	auto createElement(entt::registry& registry, const std::string& identifier, Layer layer, TextInputCreateInfo createInfo) -> entt::entity;
 
 	/**
 	 * \brief Destroys a UI element
@@ -203,7 +203,7 @@ namespace Client::UI
 	 * \param registry The registry to remove the UI element from
 	 * \param identifier The identifier of the UI element
 	 */
-	auto destroyElement(entt::registry& registry, std::string identifier) -> void;
+	auto destroyElement(entt::registry& registry, const std::string& identifier) -> void;
 
 	/**
 	 * \brief Update all the UI elements
