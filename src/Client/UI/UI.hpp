@@ -69,8 +69,8 @@ namespace Client::UI
 	 */
 	struct SliderCreateInfo
 	{
-		static const auto DEFAULT_MIN = std::int32_t(0I);
-		static const auto DEFAULT_MAX = std::int32_t(100I);
+		static const auto DEFAULT_MIN = std::int32_t(0);
+		static const auto DEFAULT_MAX = std::int32_t(100);
 
 		sf::Vector2f position;
 		sf::Vector2f size;
