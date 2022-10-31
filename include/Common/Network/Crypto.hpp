@@ -12,7 +12,7 @@ namespace Common::Network
 	 * \class PublicKeyCryptographer Crypto.hpp "Network/Crypto.hpp"
 	 * \brief Encrypts and decrypts messages using public key cryptography techniques
 	 */
-	class PublicKeyCryptographer
+	class COMMON_API PublicKeyCryptographer
 	{
 	public:
 		static const auto CIPHER_BYTES = std::size_t(32);

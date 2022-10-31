@@ -20,10 +20,10 @@ namespace Common::Game
 		WorldEntityStats stats;
 	};
 
-	auto createWorldEntity(entt::registry& registry, const WorldEntityData& data) -> entt::entity;
-	auto createWorldEntity(entt::registry& registry, entt::entity entity, const WorldEntityData& data) -> entt::entity;
+	COMMON_API auto createWorldEntity(entt::registry& registry, const WorldEntityData& data) -> entt::entity;
+	COMMON_API auto createWorldEntity(entt::registry& registry, entt::entity entity, const WorldEntityData& data) -> entt::entity;
 
-	auto serialiseWorldEntity(entt::registry& registry, entt::entity entity, Network::MessageData& messageData) -> void;
-	auto deserialiseWorldEntity(Network::MessageData& messageData) -> WorldEntityData;
+	COMMON_API auto serialiseWorldEntity(entt::registry& registry, entt::entity entity, Network::MessageData& messageData) -> void;
+	COMMON_API auto deserialiseWorldEntity(Network::MessageData& messageData) -> WorldEntityData;
 
 } // namespace Common::Game

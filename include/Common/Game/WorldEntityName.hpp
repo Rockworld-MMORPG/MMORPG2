@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/Network/SerialisedComponent.hpp"
+#include <string>
 
 namespace Common::Game
 {
