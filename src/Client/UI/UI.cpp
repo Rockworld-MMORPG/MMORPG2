@@ -337,7 +337,7 @@ namespace Client::UI
 	{
 		renderTarget.setView(m_uiView);
 
-		std::multimap<std::uint8_t, sf::Drawable*> elementsToDraw;
+		std::multimap<Layer, sf::Drawable*> elementsToDraw;
 		for (const auto entity : registry.view<ElementData>())
 		{
 			auto& data = registry.get<ElementData>(entity);
