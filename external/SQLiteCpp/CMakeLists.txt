@@ -1,3 +1,11 @@
+# Force disable cpplint and cppcheck because they cause issues when compiling with MSVC
+set(SQLITECPP_RUN_CPPLINT
+    OFF
+    CACHE BOOL "Run cpplint.py tool for Google C++ StyleGuide." FORCE)
+set(SQLITECPP_RUN_CPPCHECK
+    OFF
+    CACHE BOOL "Run cppcheck C++ static analysis tool." FORCE)
+
 fetchcontent_declare(
   sqlitecpp
   GIT_REPOSITORY https://github.com/SRombauts/SQLiteCpp.git
@@ -5,8 +13,4 @@ fetchcontent_declare(
   GIT_SHALLOW TRUE
   GIT_PROGRESS TRUE)
 
-set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 fetchcontent_makeavailable(sqlitecpp)
-
-set(SQLITECPP_RUN_CPPLINT OFF)
-set(SQLITECPP_RUN_CPPCHECK OFF)
