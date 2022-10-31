@@ -1,7 +1,7 @@
 add_library(mmorpg-common)
 add_library(MMORPG::Common ALIAS mmorpg-common)
 
-find_package(OpenSSL 1 REQUIRED)
+find_package(OpenSSL 1.1 REQUIRED)
 
 target_sources(
   mmorpg-common
