@@ -69,10 +69,13 @@ namespace Client::UI
 	 */
 	struct SliderCreateInfo
 	{
+		static const auto DEFAULT_MIN = std::int32_t(0I);
+		static const auto DEFAULT_MAX = std::int32_t(100I);
+
 		sf::Vector2f position;
 		sf::Vector2f size;
-		std::int32_t minimumValue = 0;
-		std::int32_t maximumValue = 100;
+		std::int32_t minimumValue = DEFAULT_MIN;
+		std::int32_t maximumValue = DEFAULT_MAX;
 	};
 
 	/**
@@ -81,9 +84,14 @@ namespace Client::UI
 	 */
 	struct TextInputCreateInfo
 	{
+		static const auto DEFAULT_MAX_LENGTH     = std::size_t(32U);
+		static const auto DEFAULT_CHARACTER_SIZE = std::uint32_t(12U);
+		static const auto NO_MASKING             = char(0);
+
 		sf::Vector2f position;
-		sf::Vector2f size;
-		std::uint32_t textSize = 12;
+		size_t maxLength       = DEFAULT_MAX_LENGTH;
+		char maskingCharacter  = NO_MASKING;
+		std::uint32_t textSize = DEFAULT_CHARACTER_SIZE;
 		sf::Font& font;
 	};
 
@@ -107,9 +115,9 @@ namespace Client::UI
 	 */
 	struct SliderData
 	{
-		float value               = 0.0F;
-		std::int32_t minimumValue = 0;
-		std::int32_t maximumValue = 100;
+		std::int32_t value        = 0;
+		std::int32_t minimumValue = SliderCreateInfo::DEFAULT_MIN;
+		std::int32_t maximumValue = SliderCreateInfo::DEFAULT_MAX;
 	};
 
 	/**
@@ -118,7 +126,9 @@ namespace Client::UI
 	 */
 	struct TextInputData
 	{
-		bool active = false;
+		bool active           = false;
+		char maskingCharacter = TextInputCreateInfo::NO_MASKING;
+		size_t maxLength      = TextInputCreateInfo::DEFAULT_MAX_LENGTH;
 		std::string input;
 	};
 

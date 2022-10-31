@@ -134,14 +134,20 @@ namespace Client::UI
 		auto& data      = registry.get<ElementData>(entity);
 		auto& callbacks = registry.get<ElementCallbacks>(entity);
 
+		// Unicode is compatible with ASCII
+		const auto WIDEST_CHARACTER = 'M';
+		auto widestCharacterWidth   = createInfo.font.getGlyph(WIDEST_CHARACTER, createInfo.textSize, false).bounds.width;
+
 		auto& background = registry.emplace<sf::RectangleShape>(entity);
-		background.setSize(createInfo.size);
+		background.setSize(sf::Vector2f(static_cast<float>(createInfo.maxLength) * widestCharacterWidth, static_cast<float>(createInfo.textSize)));
 		background.setFillColor(sf::Color::White);
 		background.setOutlineThickness(2.0F);
 		background.setOutlineColor(sf::Color::Black);
 		background.setPosition(createInfo.position);
 
-		auto& inputData = registry.emplace<TextInputData>(entity);
+		auto& inputData            = registry.emplace<TextInputData>(entity);
+		inputData.maskingCharacter = createInfo.maskingCharacter;
+		inputData.maxLength        = createInfo.maxLength;
 
 		data.drawable = &background;
 		data.collider = background.getGlobalBounds();
@@ -153,7 +159,7 @@ namespace Client::UI
 		    TextCreateInfo{
 		        background.getPosition(),
 		        createInfo.font,
-		        "test",
+		        "",
 		        createInfo.textSize}));
 		registry.get<sf::Text>(data.children.front()).setFillColor(sf::Color::Black);
 
@@ -285,13 +291,31 @@ namespace Client::UI
 							}
 							break;
 						default:
-							if ((event.text.unicode > 31) && (event.text.unicode < 127))
+							if (event.text.unicode < 32)
 							{
-								textData.input.push_back(static_cast<char>(event.text.unicode));
+								break;
 							}
+							if (event.text.unicode > 126)
+							{
+								break;
+							}
+							if (textData.input.size() == textData.maxLength)
+							{
+								break;
+							}
+
+							textData.input.push_back(static_cast<char>(event.text.unicode));
 					}
 
-					text.setString(textData.input);
+					if (textData.maskingCharacter == TextInputCreateInfo::NO_MASKING)
+					{
+						text.setString(textData.input);
+					}
+					else
+					{
+						auto string = std::string(textData.input.size(), textData.maskingCharacter);
+						text.setString(string);
+					}
 					return true;
 				}
 			}
