@@ -1,8 +1,6 @@
 add_library(mmorpg-common)
 add_library(MMORPG::Common ALIAS mmorpg-common)
 
-find_package(OpenSSL 1.1 REQUIRED)
-
 target_sources(
   mmorpg-common
   PRIVATE Game/WorldEntityPosition.cpp
@@ -24,7 +22,7 @@ target_include_directories(
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PUBLIC ${mmorpg_SOURCE_DIR}/include)
 
-target_link_libraries(mmorpg-common PUBLIC SFML::Network EnTT::EnTT spdlog::spdlog OpenSSL::Crypto)
+target_link_libraries(mmorpg-common PUBLIC SFML::Network EnTT::EnTT spdlog::spdlog crypto)
 target_compile_features(mmorpg-common PRIVATE cxx_std_20)
 target_compile_definitions(
   mmorpg-common PRIVATE _EXPORT_COMMON=TRUE

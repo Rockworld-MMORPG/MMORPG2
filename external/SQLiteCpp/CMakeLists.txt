@@ -6,6 +6,9 @@ set(SQLITECPP_RUN_CPPCHECK
     OFF
     CACHE BOOL "Run cppcheck C++ static analysis tool." FORCE)
 
+# Build this statically because it doesn't like being built dynamically
+set(BUILD_SHARED_LIBS OFF)
+
 fetchcontent_declare(
   sqlitecpp
   GIT_REPOSITORY https://github.com/SRombauts/SQLiteCpp.git
