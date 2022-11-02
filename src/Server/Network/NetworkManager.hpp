@@ -1,9 +1,9 @@
 #pragma once
 
+#include "Common/Network/Crypto.hpp"
 #include "Network/Client.hpp"
 #include "Server/Manager.hpp"
-#include <Common/Network/Message.hpp>
-#include <Common/Network/MessageQueue.hpp>
+#include <Common/Network.hpp>
 #include <SFML/Network/SocketSelector.hpp>
 #include <SFML/Network/TcpListener.hpp>
 #include <SFML/Network/UdpSocket.hpp>
@@ -187,6 +187,8 @@ namespace Server
 
 		std::unordered_map<std::uint64_t, entt::entity> m_clientIPMap;
 		std::list<entt::entity> m_clientsPendingDisconnection;
+
+		Common::Network::PublicKeyCryptographer m_cryptographer;
 
 		Common::Network::MessageQueue<Common::Network::Message> m_messageQueue;
 		std::uint64_t m_currentMessageIdentifier = 0;

@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include <Common/Game.hpp>
 
 namespace Server
 {
@@ -10,10 +11,10 @@ namespace Server
 	{
 		auto fDt = deltaTime.asSeconds();
 
-		auto view = server.registry.view<Common::Game::WorldPosition, Common::Input::InputState>();
+		auto view = server.registry.view<Common::Game::WorldEntityPosition, Common::Input::InputState>();
 		for (const auto entity : view)
 		{
-			auto& worldPositionComponent = server.registry.get<Common::Game::WorldPosition>(entity);
+			auto& worldPositionComponent = server.registry.get<Common::Game::WorldEntityPosition>(entity);
 			auto& inputComponent         = server.registry.get<Common::Input::InputState>(entity);
 
 			sf::Vector2f delta{0.0F, 0.0F};
@@ -40,7 +41,7 @@ namespace Server
 
 	SYSTEM_FN(BroadcastMovement)
 	{
-		for (const auto entity : server.registry.view<Common::Game::WorldPosition, Common::Input::InputState>())
+		for (const auto entity : server.registry.view<Common::Game::WorldEntityPosition, Common::Input::InputState>())
 		{
 			auto& inputState = server.registry.get<Common::Input::InputState>(entity);
 			if (inputState.changed)
@@ -67,6 +68,11 @@ namespace Server
 		server.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Server_DestroyEntity, data);
 		server.networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Server_Disconnect, message.header.entityID, data);
 		server.networkManager.markForDisconnect(message.header.entityID);
+
+		if (server.registry.all_of<Login::UserData>(message.header.entityID))
+		{
+			server.loginManager.logout(server.registry.get<Login::UserData>(message.header.entityID).username);
+		}
 	}
 
 	HANDLER_FN(Command)
@@ -75,25 +81,25 @@ namespace Server
 		server.commandShell.parseMessage(command);
 	}
 
-	HANDLER_FN(CreateEntity)
+	HANDLER_FN(Spawn)
 	{
-		if (server.registry.all_of<Common::Game::WorldPosition>(message.header.entityID))
+		if (server.registry.all_of<Common::Game::WorldEntityPosition>(message.header.entityID))
 		{
 			return;
 		}
 
-		spdlog::debug("Creating a player for {}", static_cast<std::uint32_t>(message.header.entityID));
+		auto username = server.registry.get<Login::UserData>(message.header.entityID).username;
 
-		auto& worldPosition = server.registry.emplace<Common::Game::WorldPosition>(message.header.entityID);
-		server.registry.emplace<Common::Input::InputState>(message.header.entityID);
+		spdlog::debug("Creating a player for {}", username);
 
-		auto& worldEntityType = server.registry.emplace<Common::Game::WorldEntityType>(message.header.entityID);
-		worldEntityType.type  = 0;
+		server.registry.emplace_or_replace<Common::Input::InputState>(message.header.entityID);
+		Common::Game::createWorldEntity(server.registry, message.header.entityID, {});
+		auto& worldEntityName = server.registry.get<Common::Game::WorldEntityName>(message.header.entityID);
+		worldEntityName.name  = username;
 
 		auto data = Common::Network::MessageData();
 		data << message.header.entityID;
-		worldEntityType.serialise(data);
-		worldPosition.serialise(data);
+		Common::Game::serialiseWorldEntity(server.registry, message.header.entityID, data);
 		server.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Server_CreateEntity, data);
 	}
 
@@ -145,9 +151,9 @@ namespace Server
 		auto data       = Common::Network::MessageData();
 		auto entityList = std::vector<entt::entity>();
 
-		for (const auto entity : server.registry.view<Common::Game::WorldPosition>())
+		for (const auto entity : server.registry.view<Common::Game::WorldEntityPosition>())
 		{
-			auto& worldPositionComponent = server.registry.get<Common::Game::WorldPosition>(entity);
+			auto& worldPositionComponent = server.registry.get<Common::Game::WorldEntityPosition>(entity);
 			if (worldPositionComponent.instanceID == tileIdentifier)
 			{
 				entityList.emplace_back(entity);
@@ -157,23 +163,54 @@ namespace Server
 		data << std::uint32_t(entityList.size());
 		for (const auto entity : entityList)
 		{
-			auto& worldPositionComponent   = server.registry.get<Common::Game::WorldPosition>(entity);
-			auto& worldEntityTypeComponent = server.registry.get<Common::Game::WorldEntityType>(entity);
 			data << entity;
-			worldEntityTypeComponent.serialise(data);
-			worldPositionComponent.serialise(data);
+			Common::Game::serialiseWorldEntity(server.registry, entity, data);
 		}
 
 		server.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Server_WorldState, data);
+	}
+
+	HANDLER_FN(Authenticate)
+	{
+		auto username = std::string();
+		auto password = std::string();
+
+		message.data >> username >> password;
+
+		auto data = Common::Network::MessageData();
+
+		auto loggedInResult = server.loginManager.isLoggedIn(username);
+		if (loggedInResult)
+		{
+			data << static_cast<std::uint8_t>(Login::AuthenticationResult::AlreadyLoggedIn);
+		}
+		else
+		{
+			auto authResult = server.loginManager.authenticate(username, password);
+			data << static_cast<std::uint8_t>(authResult);
+
+			if (authResult == Login::AuthenticationResult::Valid)
+			{
+				server.registry.emplace<Login::UserData>(message.header.entityID, Login::UserData{username});
+				server.loginManager.login(username);
+			}
+		}
+
+		server.networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Server_Authenticate, message.header.entityID, data);
 	}
 
 
 #undef SYSTEM_FN
 #undef HANDLER_FN
 
-	Server::Server() :
+	Server::Server(const std::filesystem::path& executableDirectory) :
+	    databaseManager("database.db"),
+	    loginManager(databaseManager),
 	    networkManager(*this)
 	{
+		databaseManager.createTables();
+		loginManager.createUser("admin", "password");
+
 		m_clock.restart();
 		networkManager.init();
 
@@ -184,9 +221,11 @@ namespace Server
 		    = Common::Network::MessageType;
 		addMessageHandler(MT::Client_Connect, handlerConnect);
 		addMessageHandler(MT::Client_Disconnect, handlerDisconnect);
+		addMessageHandler(MT::Client_Authenticate, handlerAuthenticate);
+
 		addMessageHandler(MT::Command, handlerCommand);
 
-		addMessageHandler(MT::Client_Spawn, handlerCreateEntity);
+		addMessageHandler(MT::Client_Spawn, handlerSpawn);
 		addMessageHandler(MT::Client_Action, handlerAction);
 		addMessageHandler(MT::Client_GetWorldState, handlerGetWorldState);
 

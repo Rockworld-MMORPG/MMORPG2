@@ -7,10 +7,10 @@ namespace Common::Game
 {
 
 	/**
-	 * \struct WorldPosition WorldPosition.hpp <Common/Game/WorldPosition.hpp>
+	 * \struct WorldEntityPosition WorldEntityPosition.hpp <Common/Game/WorldEntityPosition.hpp>
 	 * \brief Data about the position of a world entity within the world space
 	 */
-	struct COMMON_API WorldPosition : public Network::SerialisedComponent<WorldPosition>
+	struct COMMON_API WorldEntityPosition : public Network::SerialisedComponent<WorldEntityPosition>
 	{
 		std::uint32_t instanceID = 0;
 		sf::Vector2f position;

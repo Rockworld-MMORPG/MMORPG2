@@ -1,3 +1,6 @@
+#pragma once
+
+#include "Common/Network/Crypto.hpp"
 #include "Common/Network/Message.hpp"
 #include "Common/Network/MessageData.hpp"
 #include "Common/Network/MessageHeader.hpp"

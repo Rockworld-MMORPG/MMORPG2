@@ -15,6 +15,15 @@ namespace Common::Network
 		return buffer;
 	}
 
+	auto Message::unpack(std::vector<std::uint8_t>& buffer) -> void
+	{
+		auto dataLength = buffer.size() - sizeof(MessageHeader);
+		data.resize(dataLength);
+
+		std::memcpy(&header, buffer.data(), sizeof(MessageHeader));
+		std::memcpy(data.data(), buffer.data() + sizeof(MessageHeader), data.size());
+	}
+
 	auto Message::unpack(std::array<std::uint8_t, MAX_MESSAGE_LENGTH>& buffer, const std::size_t length) -> void
 	{
 		auto dataLength = length - sizeof(MessageHeader);

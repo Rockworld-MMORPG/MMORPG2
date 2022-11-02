@@ -10,11 +10,11 @@
 #include <SFML/Graphics/View.hpp>
 #include <entt/entity/registry.hpp>
 
-namespace Client::Game
+namespace Client::States
 {
 
 	/**
-	 * \class Game Game.hpp "Game/Game.hpp"
+	 * \class Game Game.hpp "States/Game.hpp"
 	 * \brief State implementing the main gameplay cycle
 	 */
 	class Game final : public State
@@ -88,6 +88,8 @@ namespace Client::Game
 		Graphics::TextureAtlas m_textureAtlas;
 
 		UI::UIRenderer m_uiRenderer;
+		entt::entity m_healthTextEntity;
+		entt::entity m_magicTextEntity;
 
 		sf::View m_camera;
 
@@ -96,4 +98,4 @@ namespace Client::Game
 		sf::Font m_font;
 	};
 
-} // namespace Client::Game
+} // namespace Client::States

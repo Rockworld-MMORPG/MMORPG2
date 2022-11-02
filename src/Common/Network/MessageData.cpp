@@ -80,6 +80,21 @@ namespace Common::Network
 		return operator<<(tempValue);
 	}
 
+	auto MessageData::operator<<(const std::string& value) -> MessageData&
+	{
+		m_data.reserve(m_data.size() + value.size() + sizeof(std::uint16_t));
+
+		auto length = std::uint16_t(value.size());
+		operator<<(length);
+
+		for (const auto character : value)
+		{
+			m_data.emplace_back(static_cast<std::uint8_t>(character));
+		}
+
+		return *this;
+	}
+
 	auto MessageData::operator>>(bool& value) -> MessageData&
 	{
 		value = static_cast<bool>(m_data.at(m_readHead));
@@ -142,6 +157,22 @@ namespace Common::Network
 		auto tempValue = std::uint32_t(0);
 		UNPACK_MULTIPLE(std::uint32_t, tempValue)
 		value = static_cast<entt::entity>(tempValue);
+		return *this;
+	}
+
+	auto MessageData::operator>>(std::string& value) -> MessageData&
+	{
+		auto length = std::uint16_t(0);
+		operator>>(length);
+
+		value.resize(length);
+		for (auto i = 0; i < length; ++i)
+		{
+			auto val = std::uint8_t(0);
+			operator>>(val);
+			value.at(i) = static_cast<char>(val);
+		}
+
 		return *this;
 	}
 

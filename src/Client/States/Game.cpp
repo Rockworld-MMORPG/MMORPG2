@@ -1,18 +1,26 @@
-#include "Game/Game.hpp"
+#include "States/Game.hpp"
+#include "Common/Game/WorldEntityStats.hpp"
+#include "Common/Network/MessageData.hpp"
 #include "Engine/Engine.hpp"
 #include "Graphics/TextureAtlas.hpp"
 #include "Network/NetworkManager.hpp"
 #include "UI/UI.hpp"
-#include <filesystem>
-#include <fstream>
+#include <Common/Game/WorldEntity.hpp>
 #include <nlohmann/json.hpp>
 
-namespace Client::Game
+namespace Client::States
 {
 	Game::Game(Engine& engine) :
 	    State(engine),
 	    m_textureAtlas(sf::Vector2u(32, 32), sf::Vector2u(32, 32))
 	{
+		if (!engine.networkManager.isConnected())
+		{
+			spdlog::warn("Exiting game state - not connected");
+			engine.setShouldPopState(true);
+			return;
+		}
+
 		engine.assetManager.loadAsset("levels/test_level.dat", "test_level");
 		engine.assetManager.loadAsset("textures/player.png", "player");
 		engine.assetManager.loadAsset("OpenSans-Regular.ttf", "font");
@@ -73,33 +81,14 @@ namespace Client::Game
 		success          = m_font.loadFromMemory(font.data(), font.size());
 
 		UI::createElement(m_registry, "image_portrait", 0, UI::ImageCreateInfo{sf::Vector2f(10.0F, 10.0F), sf::Vector2f(16.0F, 16.0F), m_playerTexture});
-		UI::createElement(m_registry, "text_health", 0, UI::TextCreateInfo{sf::Vector2f(100.0F, 10.0F), m_font, "Health [ 100 / 100 ]", 20});
-		UI::createElement(m_registry, "text_power", 0, UI::TextCreateInfo{sf::Vector2f(101.0F, 35.0F), m_font, "Power [ 100 / 100 ]", 20});
-		UI::createElement(m_registry, "button_connect", 0, UI::ButtonCreateInfo{sf::Vector2f(10.0F, 670.0F), sf::Vector2f(100.0F, 40.0F), "Connect", m_font, {}, [&](sf::Mouse::Button b) {
-			                                                                        if (engine.networkManager.isConnected()) { return; }
-			                                                                        engine.networkManager.connect();
-			                                                                        if (engine.networkManager.isConnected())
-			                                                                        {
-				                                                                        auto data = Common::Network::MessageData();
-				                                                                        engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Client_Spawn, data);
+		m_healthTextEntity = UI::createElement(m_registry, "text_health", 0, UI::TextCreateInfo{sf::Vector2f(100.0F, 10.0F), m_font, "Health [ 100 / 100 ]", 20});
+		m_magicTextEntity  = UI::createElement(m_registry, "text_power", 0, UI::TextCreateInfo{sf::Vector2f(101.0F, 35.0F), m_font, "Power [ 100 / 100 ]", 20});
+		UI::createElement(m_registry, "button_disconnect", 0, UI::RectButtonCreateInfo{sf::Vector2f(10.0F, 670.0F), sf::Vector2f(100.0F, 40.0F), "Disconnect", m_font, {}, [&](sf::Mouse::Button b) {
+			                                                                               engine.networkManager.disconnect();
+			                                                                               engine.setShouldPopState();
+		                                                                               }});
 
-				                                                                        // TODO - change this to the actual tile identifier
-				                                                                        data = Common::Network::MessageData();
-				                                                                        data << std::uint32_t(0);
-				                                                                        engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Client_GetWorldState, data);
-			                                                                        }
-		                                                                        }});
-		UI::createElement(m_registry, "button_disconnect", 0, UI::ButtonCreateInfo{sf::Vector2f(120.0F, 670.0F), sf::Vector2f(100.0F, 40.0F), "Disconnect", m_font, {}, [&](sf::Mouse::Button b) {
-			                                                                           if (!engine.networkManager.isConnected()) { return; }
-			                                                                           engine.networkManager.disconnect();
-			                                                                           for (const auto entity : m_registry.view<entt::entity>())
-			                                                                           {
-				                                                                           m_registry.destroy(entity);
-			                                                                           }
-		                                                                           }});
-
-		UI::createElement(m_registry, "test_text_input", 0, UI::TextInputCreateInfo{sf::Vector2f(10.0F, 640.0F), sf::Vector2f(250.0F, 20.0F), 16, m_font});
-
+		UI::createElement(m_registry, "test_text_input", 0, UI::TextInputCreateInfo{sf::Vector2f(10.0F, 640.0F), 32, UI::TextInputCreateInfo::NO_MASKING, 16, m_font});
 
 		engine.inputManager.bindAction(sf::Keyboard::W, Common::Input::ActionType::MoveForward);
 		engine.inputManager.bindAction(sf::Keyboard::A, Common::Input::ActionType::StrafeLeft);
@@ -110,6 +99,14 @@ namespace Client::Game
 		m_level               = Common::World::Level(testLevel);
 
 		m_terrainRenderer.addLevel(entt::hashed_string("test_level").value(), m_level, m_textureAtlas);
+
+		auto data = Common::Network::MessageData();
+		engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Client_Spawn, data);
+
+		// TODO - change this to the actual tile identifier
+		data = Common::Network::MessageData();
+		data << std::uint32_t(0);
+		engine.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Client_GetWorldState, data);
 	}
 
 	Game::~Game()
@@ -130,29 +127,32 @@ namespace Client::Game
 		}
 	}
 
+	auto createPlayer(entt::registry& registry, entt::entity serverEntityID, Common::Game::WorldEntityData& entityData, sf::Texture& playerTexture)
+	{
+		auto newEntity = registry.create();
+		auto& sprite   = registry.emplace<sf::Sprite>(newEntity);
+		sprite.setTexture(playerTexture);
+		sprite.setPosition(entityData.position.position);
+
+		registry.emplace<Common::Game::WorldEntityStats>(newEntity, entityData.stats);
+		registry.emplace<Common::Game::WorldEntityName>(newEntity, entityData.name);
+
+		auto& serverID = registry.emplace<entt::entity>(newEntity);
+		serverID       = serverEntityID;
+
+		auto& inputState = registry.emplace<Common::Input::InputState>(newEntity);
+	}
+
 	auto Game::parseUDP(Common::Network::Message& message) -> void
 	{
 		switch (message.header.type)
 		{
 			case Common::Network::MessageType::Server_CreateEntity:
 			{
-				auto serverEntityID           = entt::entity(entt::null);
-				auto worldPositionComponent   = Common::Game::WorldPosition();
-				auto worldEntityTypeComponent = Common::Game::WorldEntityType();
-
-				message.data >> serverEntityID;
-				worldEntityTypeComponent.deserialise(message.data);
-				worldPositionComponent.deserialise(message.data);
-
-				auto entity  = m_registry.create();
-				auto& sprite = m_registry.emplace<sf::Sprite>(entity);
-				sprite.setTexture(m_playerTexture);
-				sprite.setPosition(worldPositionComponent.position);
-
-				auto& serverID = m_registry.emplace<entt::entity>(entity);
-				serverID       = serverEntityID;
-
-				auto& inputState = m_registry.emplace<Common::Input::InputState>(entity);
+				auto entityID = entt::entity(entt::null);
+				message.data >> entityID;
+				auto entityData = Common::Game::deserialiseWorldEntity(message.data);
+				createPlayer(m_registry, message.header.entityID, entityData, m_playerTexture);
 			}
 			break;
 			case Common::Network::MessageType::Server_InputState:
@@ -197,34 +197,25 @@ namespace Client::Game
 
 				for (auto i = 0; i < entityCount; ++i)
 				{
-					auto serverEntityID           = entt::entity(entt::null);
-					auto worldPositionComponent   = Common::Game::WorldPosition();
-					auto worldEntityTypeComponent = Common::Game::WorldEntityType();
-
+					auto serverEntityID = entt::entity(entt::null);
 					message.data >> serverEntityID;
-					worldEntityTypeComponent.deserialise(message.data);
-					worldPositionComponent.deserialise(message.data);
+					auto worldEntityData = Common::Game::deserialiseWorldEntity(message.data);
 
 					auto clientEntityIterator = std::find_if(m_registry.view<entt::entity>().begin(), m_registry.view<entt::entity>().end(), [&](const entt::entity entity) {
 						return m_registry.get<entt::entity>(entity) == serverEntityID;
 					});
 					if (clientEntityIterator == m_registry.view<entt::entity>().end())
 					{
-						auto newEntity = m_registry.create();
-						auto& sprite   = m_registry.emplace<sf::Sprite>(newEntity);
-						sprite.setTexture(m_playerTexture);
-						sprite.setPosition(worldPositionComponent.position);
-
-						auto& serverID = m_registry.emplace<entt::entity>(newEntity);
-						serverID       = serverEntityID;
-
-						auto& inputState = m_registry.emplace<Common::Input::InputState>(newEntity);
+						createPlayer(m_registry, serverEntityID, worldEntityData, m_playerTexture);
 					}
 					else
 					{
 						auto existingEntity = *clientEntityIterator;
 						auto& sprite        = m_registry.get<sf::Sprite>(existingEntity);
-						sprite.setPosition(worldPositionComponent.position);
+						sprite.setPosition(worldEntityData.position.position);
+
+						auto& stats = m_registry.get<Common::Game::WorldEntityStats>(existingEntity);
+						stats       = worldEntityData.stats;
 					}
 				}
 			}
@@ -289,6 +280,13 @@ namespace Client::Game
 
 	auto Game::update(const sf::Time deltaTime) -> void
 	{
+		if (!engine.networkManager.isConnected())
+		{
+			spdlog::warn("Exiting game state - not connected");
+			engine.setShouldPopState(true);
+			return;
+		}
+
 		UI::update(m_registry, deltaTime);
 
 		auto changedStates = engine.inputManager.getChangedStates();
@@ -299,6 +297,13 @@ namespace Client::Game
 			sendAction(actionType, pressed ? Common::Input::Action::State::Begin : Common::Input::Action::State::End, engine.networkManager);
 		}
 
+		for (const auto entity : m_registry.view<Common::Game::WorldEntityStats>())
+		{
+			auto& stats          = m_registry.get<Common::Game::WorldEntityStats>(entity);
+			stats.health.current = std::clamp(stats.health.current + (stats.health.regenRate * deltaTime.asMilliseconds()) / 1'000, std::uint32_t(0), stats.health.max);
+			stats.magic.current  = std::clamp(stats.magic.current + (stats.magic.regenRate * deltaTime.asMilliseconds()) / 1'000, std::uint32_t(0), stats.magic.max);
+		}
+
 		for (const auto entity : m_registry.view<sf::Sprite, Common::Input::InputState>())
 		{
 			auto& input    = m_registry.get<Common::Input::InputState>(entity);
@@ -307,7 +312,14 @@ namespace Client::Game
 
 			if (serverID == engine.networkManager.getClientID())
 			{
+				auto& stats = m_registry.get<Common::Game::WorldEntityStats>(entity);
+
+				auto healthText = fmt::format("Health [ {} / {} ]", stats.health.current / 1'000, stats.health.max / 1'000);
+				auto magicText  = fmt::format("Power [ {} / {} ]", stats.magic.current / 1'000, stats.magic.max / 1'000);
+
 				m_camera.setCenter(sprite.getPosition() + sprite.getGlobalBounds().getSize() * 0.5F);
+				m_registry.get<sf::Text>(m_healthTextEntity).setString(healthText);
+				m_registry.get<sf::Text>(m_magicTextEntity).setString(magicText);
 			}
 
 			auto deltaPosition = sf::Vector2f(0.0F, 0.0F);
@@ -373,4 +385,4 @@ namespace Client::Game
 		spdlog::debug("Loaded tile {}", static_cast<std::uint32_t>(identifier));
 	}
 
-} // namespace Client::Game
+} // namespace Client::States

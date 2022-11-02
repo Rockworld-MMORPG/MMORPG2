@@ -29,14 +29,23 @@ jobs:
       # Install dependencies if we're on Linux
       - name: Install Dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install libxrandr-dev libxcursor-dev libudev-dev libopenal-dev libflac-dev libvorbis-dev libgl1-mesa-dev libegl1-mesa-dev libdrm-dev libgbm-dev
+        run: sudo apt-get update && sudo apt-get install libsqlite3-dev libxrandr-dev libxcursor-dev libudev-dev libopenal-dev libflac-dev libvorbis-dev libgl1-mesa-dev libegl1-mesa-dev libdrm-dev libgbm-dev
 
       # Install the mold linker if we're on Linux
       - name: Install Mold
         if: runner.os == 'Linux'
         uses: rui314/setup-mold@v1
 
-      # Get the dependencies from the cache
+      # Install dependencies if we're on Windows
+      - name: Install Dependencies
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+          choco install openssl
+          choco install sqlite --params "/NoTools"
+
+      # Get the build dependencies from the cache
       - name: Cache CMake Dependencies
         uses: actions/cache@v3
         with:

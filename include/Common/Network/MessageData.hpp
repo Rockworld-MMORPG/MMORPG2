@@ -3,6 +3,7 @@
 #include "Common/Export.hpp"
 #include <cstdint>
 #include <entt/entity/entity.hpp>
+#include <string>
 #include <vector>
 
 namespace Common::Network
@@ -26,6 +27,7 @@ namespace Common::Network
 		auto operator<<(float value) -> MessageData&;
 		auto operator<<(double value) -> MessageData&;
 		auto operator<<(entt::entity value) -> MessageData&;
+		auto operator<<(const std::string& value) -> MessageData&;
 
 		auto operator>>(bool& value) -> MessageData&;
 		auto operator>>(std::uint8_t& value) -> MessageData&;
@@ -35,6 +37,7 @@ namespace Common::Network
 		auto operator>>(float& value) -> MessageData&;
 		auto operator>>(double& value) -> MessageData&;
 		auto operator>>(entt::entity& value) -> MessageData&;
+		auto operator>>(std::string& value) -> MessageData&;
 
 		/**
 		 * \brief Gets the size of the contained data

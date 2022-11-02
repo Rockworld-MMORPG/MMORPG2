@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Database/DatabaseManager.hpp"
+#include "Login/LoginManager.hpp"
 #include "Network/NetworkManager.hpp"
 #include "Shell/CommandShell.hpp"
 #include "entt/entity/fwd.hpp"
@@ -26,7 +28,7 @@ namespace Server
 		 * \brief Construct a new Server object
 		 *
 		 */
-		Server();
+		Server(const std::filesystem::path& executableDirectory);
 		/**
 		 * \brief Destroy the Server object
 		 *
@@ -81,6 +83,8 @@ namespace Server
 		 */
 		auto clearMessageHandlers(Common::Network::MessageType messageType) -> void;
 
+		DatabaseManager databaseManager;
+		LoginManager loginManager;
 		CommandShell commandShell;
 		NetworkManager networkManager;
 		entt::registry registry;

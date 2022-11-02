@@ -187,6 +187,8 @@ namespace Client
 	auto NetworkManager::sendUDP(const Common::Network::Message& message) -> void
 	{
 		auto buffer = message.pack();
+		m_cryptographer.encrypt(buffer);
+
 		auto status = m_udpSocket.send(buffer.data(), buffer.size(), Common::Network::SERVER_ADDRESS, Common::Network::UDP_PORT);
 		switch (status)
 		{
@@ -199,7 +201,8 @@ namespace Client
 
 	auto NetworkManager::receiveUDP() -> void
 	{
-		auto buffer        = std::array<std::uint8_t, Common::Network::MAX_MESSAGE_LENGTH>();
+		auto buffer = std::array<std::uint8_t, Common::Network::MAX_MESSAGE_LENGTH>();
+
 		std::size_t length = 0;
 		std::optional<sf::IpAddress> optAddress;
 		std::uint16_t remotePort = 0;
@@ -220,8 +223,11 @@ namespace Client
 			return;
 		}
 
+		auto vBuffer = std::vector<std::uint8_t>(buffer.data(), buffer.data() + length);
+		m_cryptographer.decryptFromRemote(vBuffer);
+
 		auto message = Common::Network::Message();
-		message.unpack(buffer, length);
+		message.unpack(vBuffer);
 
 		if (validateMessage(message))
 		{
@@ -232,6 +238,8 @@ namespace Client
 	auto NetworkManager::sendTCP(const Common::Network::Message& message) -> void
 	{
 		auto buffer = message.pack();
+		m_cryptographer.encrypt(buffer);
+
 		auto status = m_tcpSocket.send(buffer.data(), buffer.size());
 		switch (status)
 		{
@@ -256,8 +264,11 @@ namespace Client
 		{
 			case sf::Socket::Status::Done:
 			{
+				auto vBuffer = std::vector<std::uint8_t>(buffer.data(), buffer.data() + length);
+				m_cryptographer.decryptFromRemote(vBuffer);
+
 				auto message = Common::Network::Message();
-				message.unpack(buffer, length);
+				message.unpack(vBuffer);
 
 				if (validateMessage(message))
 				{

@@ -34,6 +34,11 @@ namespace Client
 		return *m_stateStack.top();
 	}
 
+	auto Engine::setShouldPopState(bool shouldPopState) -> void
+	{
+		m_shouldPopState = shouldPopState;
+	}
+
 	auto Engine::run() -> void
 	{
 		if (m_stateStack.empty())
@@ -43,10 +48,22 @@ namespace Client
 
 		while (!m_shouldExit)
 		{
+			if (m_shouldPopState)
+			{
+				m_shouldPopState = false;
+				popState();
+				if (m_stateStack.empty())
+				{
+					m_shouldExit = true;
+					continue;
+				}
+			}
+
 			auto deltaTime = m_clock.restart();
 
 			networkManager.update();
 			auto inboundMessages = networkManager.getMessages();
+
 			getState().parseMessages(inboundMessages);
 
 			auto event = sf::Event();
