@@ -10,6 +10,7 @@ namespace Client
 	Engine::Engine(const std::filesystem::path& executableDir) :
 	    assetManager(executableDir)
 	{
+		DiscordManager::get();
 		window.create(sf::VideoMode(sf::Vector2u(WINDOW_WIDTH, WINDOW_HEIGHT)), "Window");
 		window.setVerticalSyncEnabled(true);
 		window.setKeyRepeatEnabled(false);
@@ -19,6 +20,7 @@ namespace Client
 	auto Engine::pushState(std::unique_ptr<State>&& state) -> void
 	{
 		m_stateStack.emplace(std::forward<std::unique_ptr<State>>(state));
+		getState().onEnter();
 	}
 
 	auto Engine::popState() -> void
@@ -51,12 +53,16 @@ namespace Client
 			if (m_shouldPopState)
 			{
 				m_shouldPopState = false;
+				getState().onExit();
 				popState();
+
 				if (m_stateStack.empty())
 				{
 					m_shouldExit = true;
 					continue;
 				}
+
+				getState().onEnter();
 			}
 
 			auto deltaTime = m_clock.restart();

@@ -61,6 +61,12 @@ namespace Client::States
 		 */
 		auto render(sf::RenderTarget& renderTarget) -> void override;
 
+		/**
+		 * \brief Called when the state becomes the state at the top of the stack
+		 *
+		 */
+		auto onEnter() -> void override;
+
 	private:
 		/**
 		 * \brief Parses a message received over TCP

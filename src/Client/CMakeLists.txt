@@ -19,38 +19,17 @@ target_sources(
           World/TerrainTile.cpp
           World/TerrainRenderer.cpp)
 
-target_sources(
-  mmorpg-client
-  PRIVATE ${discord-gamesdk_SOURCE_DIR}/cpp/achievement_manager.cpp
-          ${discord-gamesdk_SOURCE_DIR}/cpp/activity_manager.cpp
-          ${discord-gamesdk_SOURCE_DIR}/cpp/application_manager.cpp
-          ${discord-gamesdk_SOURCE_DIR}/cpp/core.cpp
-          ${discord-gamesdk_SOURCE_DIR}/cpp/image_manager.cpp
-          ${discord-gamesdk_SOURCE_DIR}/cpp/lobby_manager.cpp
-          ${discord-gamesdk_SOURCE_DIR}/cpp/network_manager.cpp
-          ${discord-gamesdk_SOURCE_DIR}/cpp/overlay_manager.cpp
-          ${discord-gamesdk_SOURCE_DIR}/cpp/relationship_manager.cpp
-          ${discord-gamesdk_SOURCE_DIR}/cpp/storage_manager.cpp
-          ${discord-gamesdk_SOURCE_DIR}/cpp/store_manager.cpp
-          ${discord-gamesdk_SOURCE_DIR}/cpp/types.cpp
-          ${discord-gamesdk_SOURCE_DIR}/cpp/user_manager.cpp
-          ${discord-gamesdk_SOURCE_DIR}/cpp/voice_manager.cpp)
-
 target_include_directories(
   mmorpg-client
-  PRIVATE ${discord-gamesdk_SOURCE_DIR}/cpp
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PUBLIC ${mmorpg_SOURCE_DIR}/include)
 
-add_library(discord_game_sdk SHARED IMPORTED)
-set_target_properties(discord_game_sdk PROPERTIES IMPORTED_LOCATION
-                                                  ${discord-gamesdk_SOURCE_DIR}/lib/x86_64/discord_game_sdk.so)
-
 target_link_libraries(mmorpg-client PRIVATE MMORPG::Common SFML::Graphics SFML::Audio nlohmann_json::nlohmann_json
-                                            discord_game_sdk)
+                                            Discord::GameSDK)
+
 target_compile_features(mmorpg-client PRIVATE cxx_std_20)
 
-target_precompile_headers(mmorpg-client PRIVATE <cstdint> PCH.hpp)
+target_precompile_headers(mmorpg-client PRIVATE PCH.hpp)
 
 set(CLIENT_VERSION_MAJOR 0)
 set(CLIENT_VERSION_MINOR 1)
@@ -66,6 +45,13 @@ set(CLIENT_DISCORD_CLIENT_ID $ENV{DISCORD_CLIENT_ID})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Version.cpp.in ${CMAKE_CURRENT_SOURCE_DIR}/Version.cpp)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Discord/Secrets.cpp.in ${CMAKE_CURRENT_SOURCE_DIR}/Discord/Secrets.cpp)
+
+# TODO - figure out how to make this not just copy the entire relative path
+add_custom_command(
+  TARGET mmorpg-client
+  POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/${DISCORD_GAMESDK_LIBRARY}
+          $<TARGET_FILE_DIR:mmorpg-client>/${DISCORD_GAMESDK_LIBRARY})
 
 add_custom_command(
   TARGET mmorpg-client
