@@ -1,19 +1,22 @@
 #include "World/TerrainRenderer.hpp"
-#include <SFML/Graphics/RenderTarget.hpp>
 
 namespace Client::World
 {
 
-	auto TerrainRenderer::addLevel(Level& level) -> void
+	auto TerrainRenderer::addLevel(std::uint32_t identifier, Common::World::Level& level, Graphics::TextureAtlas& textureAtlas) -> void
 	{
-		m_tiles.emplace_back(level);
+		auto tile = TerrainTile(level, textureAtlas);
+		m_tiles.emplace(identifier, std::move(tile));
 	}
 
-	auto TerrainRenderer::render(sf::RenderTarget& renderTarget) -> void
+	auto TerrainRenderer::render(sf::RenderTarget& renderTarget, sf::Texture& atlas) -> void
 	{
-		for (auto& tile : m_tiles)
+		auto renderStates    = sf::RenderStates::Default;
+		renderStates.texture = &atlas;
+
+		for (auto& [id, tile] : m_tiles)
 		{
-			renderTarget.draw(tile);
+			renderTarget.draw(tile, renderStates);
 		}
 	}
 

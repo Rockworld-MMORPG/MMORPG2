@@ -1,24 +1,15 @@
 #include "Network/NetworkManager.hpp"
-#include "Common/Network/ClientID.hpp"
-#include "Common/Network/Message.hpp"
-#include "Common/Network/MessageData.hpp"
-#include "Common/Network/MessageHeader.hpp"
-#include "Common/Network/MessageType.hpp"
-#include "Common/Network/Protocol.hpp"
-#include "Common/Network/ServerProperties.hpp"
-#include "EntityManager.hpp"
-#include "Network/Client.hpp"
-#include "SFML/Network/IpAddress.hpp"
-#include "SFML/Network/Packet.hpp"
-#include "SFML/Network/Socket.hpp"
-#include "SFML/Network/UdpSocket.hpp"
-#include <functional>
-#include <spdlog/spdlog.h>
+#include "Server/Server.hpp"
 
 namespace Server
 {
 
-	NetworkManager g_networkManager;
+	NetworkManager::NetworkManager(Server& server) :
+	    Manager(server)
+	{
+	}
+
+	NetworkManager::~NetworkManager() = default;
 
 	auto NetworkManager::init() -> bool
 	{
@@ -53,9 +44,9 @@ namespace Server
 
 	auto NetworkManager::shutdown() -> void
 	{
-		for (const auto& [identifier, client] : m_clientList)
+		for (const auto entity : server.registry.view<Client>())
 		{
-			markForDisconnect(identifier);
+			markForDisconnect(entity);
 		}
 		disconnectClients();
 
@@ -74,13 +65,13 @@ namespace Server
 		return m_messageQueue.clearInbound();
 	}
 
-	auto NetworkManager::pushMessage(const Common::Network::Protocol protocol, const Common::Network::MessageType type, const Common::Network::ClientID clientID, Common::Network::MessageData& data) -> void
+	auto NetworkManager::pushMessage(const Common::Network::Protocol protocol, const Common::Network::MessageType type, const entt::entity entityID, Common::Network::MessageData& data) -> void
 	{
 		auto message = Common::Network::Message();
 		message.data = data;
 
 		message.header.protocol   = protocol;
-		message.header.clientID   = clientID;
+		message.header.entityID   = entityID;
 		message.header.identifier = getNextMessageIdentifier();
 		message.header.type       = type;
 
@@ -89,14 +80,13 @@ namespace Server
 
 	auto NetworkManager::pushMessage(const Common::Network::Protocol protocol, const Common::Network::MessageType type, Common::Network::MessageData& data) -> void
 	{
-		// clientID is -1 so broadcast to all connected clients
-		for (const auto& [identifier, client] : m_clientList)
+		for (const auto entity : server.registry.view<Client>())
 		{
-			pushMessage(protocol, type, identifier, data);
+			pushMessage(protocol, type, entity, data);
 		}
 	}
 
-	auto NetworkManager::update() -> void
+	auto NetworkManager::update(const sf::Time maxSelectorWaitTime = sf::milliseconds(50)) -> void
 	{
 		// Disconnect any clients awaiting disconnection
 		disconnectClients();
@@ -116,9 +106,8 @@ namespace Server
 			}
 		}
 
-		// Wait up to MAX_SELECTOR_WAIT_TIME for a socket to be ready to receive something
-		const auto MAX_SELECTOR_WAIT_TIME = sf::milliseconds(50);
-		if (m_socketSelector.wait(MAX_SELECTOR_WAIT_TIME))
+		// Wait up to maxSelectorWaitTime for a socket to be ready to receive something
+		if (m_socketSelector.wait(maxSelectorWaitTime))
 		{
 			if (m_socketSelector.isReady(m_tcpListener))
 			{
@@ -132,12 +121,12 @@ namespace Server
 			}
 			else
 			{
-				// Handle TCP data
-				for (auto& [id, client] : m_clientList)
+				for (const auto entity : server.registry.view<Client>())
 				{
+					auto& client = server.registry.get<Client>(entity);
 					if (m_socketSelector.isReady(*client.tcpSocket))
 					{
-						receiveTCP(Common::Network::ClientID(id), client);
+						receiveTCP(entity, client);
 					}
 				}
 			}
@@ -147,12 +136,12 @@ namespace Server
 	auto generateIdentifier(sf::IpAddress address, std::uint16_t port) -> std::uint64_t
 	{
 		std::uint64_t identifier = 0x00;
-		identifier |= static_cast<std::uint64_t>(address.toInteger()) << UINT32_WIDTH;
+		identifier |= static_cast<std::uint64_t>(address.toInteger()) << sizeof(std::uint32_t);
 		identifier |= static_cast<std::uint64_t>(port);
 		return identifier;
 	}
 
-	auto NetworkManager::resolveClientID(sf::IpAddress ipAddress, std::uint16_t port) -> std::optional<Common::Network::ClientID>
+	auto NetworkManager::resolveClientID(sf::IpAddress ipAddress, std::uint16_t port) -> std::optional<entt::entity>
 	{
 		std::uint64_t identifier = generateIdentifier(ipAddress, port);
 		auto iterator            = m_clientIPMap.find(identifier);
@@ -164,31 +153,33 @@ namespace Server
 		return {iterator->second};
 	}
 
-	auto NetworkManager::setClientUdpPort(Common::Network::ClientID clientID, std::uint16_t udpPort) -> void
+	auto NetworkManager::setClientUdpPort(entt::entity entityID, std::uint16_t udpPort) -> void
 	{
-		auto iterator = m_clientList.find(clientID);
-		if (iterator == m_clientList.end())
+		if (!server.registry.all_of<Client>(entityID))
 		{
-			spdlog::warn("Tried to find client {} but they do not exist", clientID.get());
-			return;
+			spdlog::warn("Tried to find client {} but they do not exist", static_cast<std::uint32_t>(entityID));
 		}
-		iterator->second.udpPort = udpPort;
-		auto identifier          = generateIdentifier(iterator->second.tcpSocket->getRemoteAddress().value(), udpPort);
-		m_clientIPMap.emplace(identifier, clientID);
-		spdlog::debug("Set client {} UDP port to {}", clientID.get(), udpPort);
-		spdlog::debug("Mapping identifier {} ({}:{}) to {}", identifier, iterator->second.tcpSocket->getRemoteAddress()->toString(), udpPort, clientID.get());
+
+		auto& client = server.registry.get<Client>(entityID);
+
+		auto originalIdentifier = generateIdentifier(*client.tcpSocket->getRemoteAddress(), client.udpPort);
+		m_clientIPMap.erase(originalIdentifier);
+
+		client.udpPort     = udpPort;
+		auto newIdentifier = generateIdentifier(client.tcpSocket->getRemoteAddress().value(), udpPort);
+		m_clientIPMap.emplace(newIdentifier, entityID);
+		spdlog::debug("Set client {} UDP port to {}", static_cast<std::uint32_t>(entityID), udpPort);
+		spdlog::debug("Mapping identifier {} ({}:{}) to {}", newIdentifier, client.tcpSocket->getRemoteAddress()->toString(), udpPort, static_cast<std::uint32_t>(entityID));
 
 		// Send the client back their client ID
-		auto data
-		    = Common::Network::MessageData();
-		data << clientID;
-
-		pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Connect, clientID, data);
+		auto data = Common::Network::MessageData();
+		data << entityID;
+		pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Server_SetClientID, entityID, data);
 	}
 
-	auto NetworkManager::markForDisconnect(Common::Network::ClientID clientID) -> void
+	auto NetworkManager::markForDisconnect(entt::entity entityID) -> void
 	{
-		m_clientsPendingDisconnection.emplace_back(clientID);
+		m_clientsPendingDisconnection.emplace_back(entityID);
 	}
 
 	auto NetworkManager::acceptNewConnection() -> void
@@ -201,27 +192,19 @@ namespace Server
 		{
 			case sf::Socket::Status::Done:
 			{
-				// Add the client to the entity manager
-				auto clientID = g_entityManager.create();
-				if (clientID.get() == -1)
-				{
-					// We can't use -1 so use something else
-					clientID = g_entityManager.create();
-				}
-				auto [pair, success] = m_clientList.emplace(clientID, Client());
+				auto entityID = server.registry.create();
+				auto& client  = server.registry.emplace<Client>(entityID);
 
-				// Add the client's TCP socket to the selector
-				auto&& client    = pair->second;
 				client.tcpSocket = std::move(tcpSocket);
 				m_socketSelector.add(*client.tcpSocket);
 
 				// Success
 				auto clientAddress = client.tcpSocket->getRemoteAddress().value();
-				spdlog::debug("Accepted a new connection from {} as client {}", clientAddress.toString(), clientID);
+				spdlog::debug("Accepted a new connection from {} as client {}", clientAddress.toString(), static_cast<std::uint32_t>(entityID));
 
 				auto data = Common::Network::MessageData();
-				data << clientID;
-				pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Connect, clientID, data);
+				data << entityID;
+				pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Server_SetClientID, entityID, data);
 			}
 			break;
 			default:
@@ -230,55 +213,63 @@ namespace Server
 		}
 	}
 
-	auto NetworkManager::closeConnection(Common::Network::ClientID clientID) -> void
+	auto NetworkManager::closeConnection(entt::entity entityID) -> void
 	{
-		spdlog::debug("Closing connection {}", clientID.get());
-		auto iterator = m_clientList.find(clientID);
-		if (iterator == m_clientList.end())
+		spdlog::debug("Closing connection {}", static_cast<std::uint32_t>(entityID));
+
+		if (!server.registry.valid(entityID))
 		{
-			spdlog::warn("Attempted to close connection {} but it does not exist", clientID.get());
+			spdlog::warn("Attempted to close connection {} but the entity is not valid", static_cast<std::uint32_t>(entityID));
+			return;
+		}
+
+		if (!server.registry.all_of<Client>(entityID))
+		{
+			spdlog::warn("Attempted to close connection {} but it does not exist", static_cast<std::uint32_t>(entityID));
 			return;
 		}
 
 		// Disconnect the client
-		auto&& client = iterator->second;
+		auto& client = server.registry.get<Client>(entityID);
 		m_socketSelector.remove(*client.tcpSocket);
 		client.tcpSocket->disconnect();
 
-		auto ipMapIterator = std::find_if(m_clientIPMap.begin(), m_clientIPMap.end(), [&](const std::pair<std::uint64_t, Common::Network::ClientID> element) {
-			return element.second == clientID;
+		auto ipMapIterator = std::find_if(m_clientIPMap.begin(), m_clientIPMap.end(), [&](const std::pair<std::uint64_t, entt::entity> element) {
+			return element.second == entityID;
 		});
-		m_clientIPMap.erase(ipMapIterator);
-		m_clientList.erase(iterator);
+		if (ipMapIterator != m_clientIPMap.end())
+		{
+			m_clientIPMap.erase(ipMapIterator);
+		}
 
+		server.registry.destroy(entityID);
 		spdlog::debug("Connection closed successfully");
 	}
 
 	auto NetworkManager::disconnectClients() -> void
 	{
-		for (const auto clientID : m_clientsPendingDisconnection)
+		for (const auto entityID : m_clientsPendingDisconnection)
 		{
-			closeConnection(clientID);
+			closeConnection(entityID);
 		}
 		m_clientsPendingDisconnection.clear();
 	}
 
-	auto NetworkManager::validateIncomingMessage(const Common::Network::ClientID clientID, Common::Network::MessageHeader& header) -> bool
+	auto NetworkManager::validateIncomingMessage(const entt::entity entityID, Common::Network::MessageHeader& header) -> bool
 	{
-		if (header.clientID != clientID)
+		if (header.entityID != entityID)
 		{
 			// Identifiers don't match
 			return false;
 		}
 
-		auto clientIterator = m_clientList.find(clientID);
-		if (clientIterator == m_clientList.end())
+		if (!server.registry.all_of<Client>(entityID))
 		{
 			// Client doesn't exist in the server's client map
 			return false;
 		}
 
-		auto& client = clientIterator->second;
+		auto& client = server.registry.get<Client>(entityID);
 		if (client.lastMessageIdentifier > header.identifier)
 		{
 			// Message is out-of-date
@@ -293,22 +284,29 @@ namespace Server
 
 	auto NetworkManager::getNextMessageIdentifier() -> std::uint64_t
 	{
-		return m_currentMessageIdentifier++;
+		return ++m_currentMessageIdentifier;
 	}
 
 	auto NetworkManager::sendUDP(Common::Network::Message& message) -> void
 	{
-		auto iterator = m_clientList.find(message.header.clientID);
-		if (iterator == m_clientList.end())
+		if (!server.registry.valid(message.header.entityID))
 		{
-			spdlog::warn("Tried to send a message to a client ({}) but they don't exist", message.header.clientID);
 			return;
 		}
 
-		sf::IpAddress remoteAddress = iterator->second.tcpSocket->getRemoteAddress().value();
-		std::uint16_t remotePort    = iterator->second.udpPort;
+		if (!server.registry.all_of<Client>(message.header.entityID))
+		{
+			spdlog::warn("Tried to send a message to a client ({}) but they don't exist", static_cast<std::uint32_t>(message.header.entityID));
+			return;
+		}
+
+		auto& client                = server.registry.get<Client>(message.header.entityID);
+		sf::IpAddress remoteAddress = client.tcpSocket->getRemoteAddress().value();
+		std::uint16_t remotePort    = client.udpPort;
 
 		auto buffer = message.pack();
+		m_cryptographer.encrypt(buffer);
+
 		auto status = m_udpSocket.send(buffer.data(), buffer.size(), remoteAddress, remotePort);
 
 		switch (status)
@@ -323,7 +321,6 @@ namespace Server
 
 	auto NetworkManager::receiveUDP() -> void
 	{
-		sf::Packet packet;
 		std::optional<sf::IpAddress> remoteAddress;
 		std::uint16_t remotePort = 0;
 
@@ -336,15 +333,18 @@ namespace Server
 			spdlog::warn("Dropped UDP packet");
 		}
 
-		auto message = Common::Network::Message();
-		message.unpack(buffer, length);
-
-		auto optClientID = resolveClientID(remoteAddress.value(), remotePort);
+		auto optClientID = resolveClientID(*remoteAddress, remotePort);
 		if (!optClientID.has_value())
 		{
-			spdlog::warn("Received a packet from a client without an ID (from {})", message.header.clientID);
+			spdlog::warn("Received a packet from a client that the server doesn't recognise ({}:{})", remoteAddress->toString(), remotePort);
 			return;
 		}
+
+		auto vBuffer = std::vector<std::uint8_t>(buffer.data(), buffer.data() + length);
+		m_cryptographer.decryptFromRemote(vBuffer);
+
+		auto message = Common::Network::Message();
+		message.unpack(vBuffer);
 
 		if (validateIncomingMessage(*optClientID, message.header))
 		{
@@ -354,30 +354,37 @@ namespace Server
 
 	auto NetworkManager::sendTCP(Common::Network::Message& message) -> void
 	{
-		auto clientID       = message.header.clientID;
-		auto clientIterator = m_clientList.find(clientID);
-		if (clientIterator == m_clientList.end())
+		if (!server.registry.valid(message.header.entityID))
 		{
 			return;
 		}
 
-		auto& socket = clientIterator->second.tcpSocket;
-		auto buffer  = message.pack();
-		auto status  = socket->send(buffer.data(), buffer.size());
+		if (!server.registry.all_of<Client>(message.header.entityID))
+		{
+			return;
+		}
+
+		auto& client = server.registry.get<Client>(message.header.entityID);
+		auto& socket = client.tcpSocket;
+
+		auto buffer = message.pack();
+		m_cryptographer.encrypt(buffer);
+
+		auto status = socket->send(buffer.data(), buffer.size());
 		switch (status)
 		{
 			case sf::Socket::Status::Done:
 				// Success
 				break;
 			case sf::Socket::Status::Disconnected:
-				markForDisconnect(clientID);
+				markForDisconnect(message.header.entityID);
 				break;
 			default:
 				spdlog::warn("Failed to send TCP packet");
 		}
 	}
 
-	auto NetworkManager::receiveTCP(Common::Network::ClientID clientID, Client& client) -> void
+	auto NetworkManager::receiveTCP(entt::entity entityID, Client& client) -> void
 	{
 		static auto buffer = std::array<std::uint8_t, Common::Network::MAX_MESSAGE_LENGTH>();
 		std::size_t length = 0;
@@ -387,20 +394,23 @@ namespace Server
 		{
 			case sf::Socket::Status::Done:
 			{
+				auto vBuffer = std::vector<std::uint8_t>(buffer.data(), buffer.data() + length);
+				m_cryptographer.decryptFromRemote(vBuffer);
+
 				auto message = Common::Network::Message();
-				message.unpack(buffer, length);
+				message.unpack(vBuffer);
 
 				// Special case because setting ports is hard
-				if (message.header.type == Common::Network::MessageType::Connect)
+				if (message.header.type == Common::Network::MessageType::Client_Connect)
 				{
-					message.header.clientID = clientID;
+					message.header.entityID = entityID;
 				}
 
 				m_messageQueue.pushInbound(std::move(message));
 			}
 			break;
 			case sf::Socket::Status::Disconnected:
-				markForDisconnect(clientID);
+				markForDisconnect(entityID);
 				break;
 			default:
 				spdlog::warn("Dropped TCP packet");

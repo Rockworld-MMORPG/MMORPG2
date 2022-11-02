@@ -18,4 +18,9 @@ namespace Server::Version
 		return ${SERVER_VERSION_PATCH} + 0;
 	}
 
+	auto getCommit() -> std::uint32_t
+	{
+		return ${SERVER_VERSION_COMMIT} + 0;
+	}
+
 } // namespace Server::Version

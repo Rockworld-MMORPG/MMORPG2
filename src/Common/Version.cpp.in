@@ -1,0 +1,26 @@
+#include "Common/Version.hpp"
+
+namespace Common::Version
+{
+
+	auto getMajor() -> std::uint32_t
+	{
+		return ${COMMON_VERSION_MAJOR} + 0;
+	}
+
+	auto getMinor() -> std::uint32_t
+	{
+		return ${COMMON_VERSION_MINOR} + 0;
+	}
+
+	auto getPatch() -> std::uint32_t
+	{
+		return ${COMMON_VERSION_PATCH} + 0;
+	}
+
+  auto getCommit() -> std::uint32_t
+	{
+		return ${COMMON_VERSION_COMMIT} + 0;
+	}
+
+} // namespace Common::Version

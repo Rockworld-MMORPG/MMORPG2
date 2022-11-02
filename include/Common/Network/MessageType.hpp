@@ -1,30 +1,40 @@
 #pragma once
 
+#include "Common/Export.hpp"
+#include "Common/Network/MessageData.hpp"
 #include <cstdint>
 
 namespace Common::Network
 {
 
-	class MessageData;
-
-	enum class MessageType : std::uint8_t
+	using MessageType_t = std::uint16_t;
+	enum class MessageType : MessageType_t
 	{
 		// 0x0 - Control messages
-		None       = 0x00,
-		Connect    = 0x01,
-		Disconnect = 0x02,
-		Terminate  = 0x03,
+		None,
+		Command,
 
-		// 0x1 - Gameplay messages
-		CreateEntity  = 0x10,
-		DestroyEntity = 0x11,
-		Movement      = 0x12,
-		Position      = 0x13,
-		Action        = 0x14,
-		InputState    = 0x15,
+		Client_PublicKey,
+		Client_Connect,
+		Client_Disconnect,
+		Client_Authenticate,
+		Client_GetClientID,
+		Client_Spawn,
+		Client_Action,
+		Client_InputState,
+		Client_GetWorldState,
+
+		Server_PublicKey,
+		Server_Authenticate,
+		Server_SetClientID,
+		Server_Disconnect,
+		Server_CreateEntity,
+		Server_DestroyEntity,
+		Server_InputState,
+		Server_WorldState,
 	};
 
-	auto operator<<(MessageData& messageData, MessageType messageType) -> MessageData&;
-	auto operator>>(MessageData& messageData, MessageType& messageType) -> MessageData&;
+	COMMON_API auto operator<<(MessageData& messageData, MessageType messageType) -> MessageData&;
+	COMMON_API auto operator>>(MessageData& messageData, MessageType& messageType) -> MessageData&;
 
 }; // namespace Common::Network
