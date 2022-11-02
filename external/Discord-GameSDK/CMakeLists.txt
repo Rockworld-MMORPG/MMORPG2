@@ -47,7 +47,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL Windows)
       ${DISCORD_GAMESDK_SOURCE_DIR}/lib/x86_64/discord_game_sdk.dll
       CACHE INTERNAL "" FORCE)
   set_target_properties(
-    discord-gamesdk-impl PROPERTIES IMPORTED_LOCATION ${discord-gamesdk_SOURCE_DIR/lib/x86_64/discord_game_sdk.dll}
+    discord-gamesdk-impl PROPERTIES IMPORTED_LOCATION ${discord-gamesdk_SOURCE_DIR}/lib/x86_64/discord_game_sdk.dll
                                     IMPORTED_IMPLIB ${discord-gamesdk_SOURCE_DIR}/lib/x86_64/discord_game_sdk.dll.lib)
 elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
   set(DISCORD_GAMESDK_LIBRARY
