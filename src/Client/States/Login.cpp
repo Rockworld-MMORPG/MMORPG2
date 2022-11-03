@@ -126,6 +126,14 @@ namespace Client::States
 	auto Login::onEnter() -> void
 	{
 		DiscordManager::get().setStatus("In the Main Menu");
+		m_registry.get<UI::TextInputData>(m_passwordTextEntity).input = "";
+		m_registry.get<UI::TextInputData>(m_usernameTextEntity).input = "";
+
+		auto passwordTextEntity = m_registry.get<UI::ElementData>(m_passwordTextEntity).children.front();
+		m_registry.get<sf::Text>(passwordTextEntity).setString("");
+
+		auto usernameTextEntity = m_registry.get<UI::ElementData>(m_usernameTextEntity).children.front();
+		m_registry.get<sf::Text>(usernameTextEntity).setString("");
 	}
 
 } // namespace Client::States
