@@ -3,9 +3,9 @@
 .vs/
 
 out/
-build/
-build-*/
+build*/
 
 CMakeUserPresets.json
 
 Version.cpp
+Secrets.cpp

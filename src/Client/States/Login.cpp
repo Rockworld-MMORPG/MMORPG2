@@ -1,4 +1,5 @@
 #include "States/Login.hpp"
+#include "Discord/DiscordManager.hpp"
 #include "Engine/Engine.hpp"
 #include "Network/NetworkManager.hpp"
 #include "States/Game.hpp"
@@ -120,6 +121,11 @@ namespace Client::States
 	auto Login::render(sf::RenderTarget& renderTarget) -> void
 	{
 		m_uiRenderer.render(m_registry, renderTarget);
+	}
+
+	auto Login::onEnter() -> void
+	{
+		DiscordManager::get().setStatus("In the Main Menu");
 	}
 
 } // namespace Client::States

@@ -67,6 +67,18 @@ namespace Client
 		 */
 		virtual auto render(sf::RenderTarget& renderTarget) -> void{};
 
+		/**
+		 * \brief Called when the state becomes the state at the top of the stack
+		 *
+		 */
+		virtual auto onEnter() -> void{};
+
+		/**
+		 * \brief Called when another state replaces this state as the one on top of the stack
+		 *
+		 */
+		virtual auto onExit() -> void{};
+
 	protected:
 		Engine& engine;
 	};

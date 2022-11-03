@@ -10,6 +10,10 @@ on:
       - "master"
       - "develop"
 
+env:
+  DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+  DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
+
 jobs:
   build:
     name: ${{ matrix.platform.name }}

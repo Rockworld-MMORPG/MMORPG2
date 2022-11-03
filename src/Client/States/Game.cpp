@@ -1,6 +1,7 @@
 #include "States/Game.hpp"
 #include "Common/Game/WorldEntityStats.hpp"
 #include "Common/Network/MessageData.hpp"
+#include "Discord/DiscordManager.hpp"
 #include "Engine/Engine.hpp"
 #include "Graphics/TextureAtlas.hpp"
 #include "Network/NetworkManager.hpp"
@@ -127,7 +128,7 @@ namespace Client::States
 		}
 	}
 
-	auto createPlayer(entt::registry& registry, entt::entity serverEntityID, Common::Game::WorldEntityData& entityData, sf::Texture& playerTexture)
+	auto createPlayer(entt::registry& registry, entt::entity serverEntityID, entt::entity clientID, Common::Game::WorldEntityData& entityData, sf::Texture& playerTexture)
 	{
 		auto newEntity = registry.create();
 		auto& sprite   = registry.emplace<sf::Sprite>(newEntity);
@@ -141,6 +142,11 @@ namespace Client::States
 		serverID       = serverEntityID;
 
 		auto& inputState = registry.emplace<Common::Input::InputState>(newEntity);
+
+		if (serverEntityID == clientID)
+		{
+			DiscordManager::get().setStatus(fmt::format("Wandering around as {}", entityData.name.name));
+		}
 	}
 
 	auto Game::parseUDP(Common::Network::Message& message) -> void
@@ -152,7 +158,7 @@ namespace Client::States
 				auto entityID = entt::entity(entt::null);
 				message.data >> entityID;
 				auto entityData = Common::Game::deserialiseWorldEntity(message.data);
-				createPlayer(m_registry, message.header.entityID, entityData, m_playerTexture);
+				createPlayer(m_registry, message.header.entityID, engine.networkManager.getClientID(), entityData, m_playerTexture);
 			}
 			break;
 			case Common::Network::MessageType::Server_InputState:
@@ -206,7 +212,7 @@ namespace Client::States
 					});
 					if (clientEntityIterator == m_registry.view<entt::entity>().end())
 					{
-						createPlayer(m_registry, serverEntityID, worldEntityData, m_playerTexture);
+						createPlayer(m_registry, serverEntityID, engine.networkManager.getClientID(), worldEntityData, m_playerTexture);
 					}
 					else
 					{
@@ -357,6 +363,10 @@ namespace Client::States
 		}
 
 		m_uiRenderer.render(m_registry, renderTarget);
+	}
+
+	auto Game::onEnter() -> void
+	{
 	}
 
 	auto Game::loadTile(const std::vector<char>& data) -> void

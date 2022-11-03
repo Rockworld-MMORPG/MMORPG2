@@ -67,6 +67,12 @@ namespace Client::States
 		 */
 		auto render(sf::RenderTarget& renderTarget) -> void override;
 
+		/**
+		 * \brief Called when the state becomes the state at the top of the stack
+		 *
+		 */
+		auto onEnter() -> void override;
+
 	private:
 		UI::UIRenderer m_uiRenderer;
 		entt::entity m_usernameTextEntity;
