@@ -1,4 +1,6 @@
 #include "Server.hpp"
+#include "Common/Game/WorldEntityName.hpp"
+#include "Common/Game/WorldEntityPosition.hpp"
 #include <Common/Game.hpp>
 
 namespace Server
@@ -6,6 +8,23 @@ namespace Server
 
 #define SYSTEM_FN(NAME) auto system##NAME(Server& server, const sf::Time deltaTime)->void
 #define HANDLER_FN(NAME) auto handler##NAME(Common::Network::Message& message, Server& server)->void
+
+	SYSTEM_FN(DatabaseSync)
+	{
+		for (const auto entity : server.registry.view<Common::Game::WorldEntityPosition>())
+		{
+			auto& name     = server.registry.get<Common::Game::WorldEntityName>(entity);
+			auto& position = server.registry.get<Common::Game::WorldEntityPosition>(entity);
+
+			spdlog::debug("Syncing {} to the database the database - inserting", name.name);
+			auto query = server.databaseManager.createQuery("UPDATE players SET instance=@INSTANCE, x_position=@XPOS, y_position=@YPOS WHERE name=@NAME");
+			query.bind("@NAME", name.name);
+			query.bind("@INSTANCE", position.instanceID);
+			query.bind("@XPOS", position.position.x);
+			query.bind("@YPOS", position.position.y);
+			query.exec();
+		}
+	}
 
 	SYSTEM_FN(PlayerMovement)
 	{
@@ -69,6 +88,20 @@ namespace Server
 		server.networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Server_Disconnect, message.header.entityID, data);
 		server.networkManager.markForDisconnect(message.header.entityID);
 
+		if (server.registry.all_of<Common::Game::WorldEntityPosition>(message.header.entityID))
+		{
+			auto& name     = server.registry.get<Common::Game::WorldEntityName>(message.header.entityID);
+			auto& position = server.registry.get<Common::Game::WorldEntityPosition>(message.header.entityID);
+
+			spdlog::debug("Syncing {} to the database the database - inserting", name.name);
+			auto query = server.databaseManager.createQuery("UPDATE players SET instance=@INSTANCE, x_position=@XPOS, y_position=@YPOS WHERE name=@NAME");
+			query.bind("@NAME", name.name);
+			query.bind("@INSTANCE", position.instanceID);
+			query.bind("@XPOS", position.position.x);
+			query.bind("@YPOS", position.position.y);
+			query.exec();
+		}
+
 		if (server.registry.all_of<Login::UserData>(message.header.entityID))
 		{
 			server.loginManager.logout(server.registry.get<Login::UserData>(message.header.entityID).username);
@@ -96,6 +129,31 @@ namespace Server
 		Common::Game::createWorldEntity(server.registry, message.header.entityID, {});
 		auto& worldEntityName = server.registry.get<Common::Game::WorldEntityName>(message.header.entityID);
 		worldEntityName.name  = username;
+
+		auto query = server.databaseManager.createQuery("SELECT * FROM players WHERE name=@USERNAME");
+		query.bind("@USERNAME", username);
+		if (query.executeStep())
+		{
+			spdlog::debug("Player {} already exists on the database - fetching", worldEntityName.name);
+			auto instance = static_cast<std::uint32_t>(query.getColumn(2).getInt());
+			sf::Vector2f position{0.0F, 0.0F};
+			position.x = static_cast<float>(query.getColumn(3).getDouble());
+			position.y = static_cast<float>(query.getColumn(4).getDouble());
+
+			auto& worldEntityPosition      = server.registry.get<Common::Game::WorldEntityPosition>(message.header.entityID);
+			worldEntityPosition.instanceID = instance;
+			worldEntityPosition.position   = position;
+		}
+		else
+		{
+			spdlog::debug("Player {} does not exist on the database - inserting", worldEntityName.name);
+			query = server.databaseManager.createQuery("INSERT INTO players (name, instance, x_position, y_position) VALUES (@NAME, @INSTANCE, @XPOS, @YPOS)");
+			query.bind("@NAME", username);
+			query.bind("@INSTANCE", 0);
+			query.bind("@XPOS", 0.0);
+			query.bind("@YPOS", 0.0);
+			query.exec();
+		}
 
 		auto data = Common::Network::MessageData();
 		data << message.header.entityID;
@@ -216,6 +274,7 @@ namespace Server
 
 		addSystem(systemPlayerMovement, sf::milliseconds(50));
 		addSystem(systemBroadcastMovement, sf::milliseconds(50));
+		addSystem(systemDatabaseSync, sf::seconds(300));
 
 		using MT
 		    = Common::Network::MessageType;
