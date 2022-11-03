@@ -13,11 +13,7 @@ set(DISCORD_GAMESDK_SOURCE_DIR_ABSOLUTE
     ${discord-gamesdk_SOURCE_DIR}
     CACHE INTERNAL "" FORCE)
 
-set(CMAKE_SKIP_BUILD_RPATH OFF)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH OFF)
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
-
-add_library(discord-gamesdk)
+add_library(discord-gamesdk STATIC)
 add_library(Discord::GameSDK ALIAS discord-gamesdk)
 
 add_library(discord-gamesdk-impl SHARED IMPORTED)
