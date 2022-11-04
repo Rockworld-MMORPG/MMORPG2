@@ -104,7 +104,10 @@ namespace Client
 		m_tcpSocket.disconnect();
 		m_socketSelector.clear();
 
-		m_isConnected = false;
+		m_isConnected                 = false;
+		m_clientID                    = entt::null;
+		m_currentMessageIdentifier    = 0;
+		m_lastServerMessageIdentifier = 0;
 	}
 
 	auto NetworkManager::isConnected() const -> bool
