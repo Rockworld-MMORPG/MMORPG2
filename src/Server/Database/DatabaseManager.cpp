@@ -25,15 +25,32 @@ namespace Server
 
 		statement = SQLite::Statement(m_databaseConnection,
 		                              R"(
-    CREATE TABLE IF NOT EXISTS players ( 
-      id          INTEGER 	NOT NULL	UNIQUE,
-      name        TEXT 			NOT NULL	UNIQUE,
-      instance    INT  			NOT NULL,
-      x_position  FLOAT			NOT NULL,
-      y_position  FLOAT			NOT NULL,
+    CREATE TABLE IF NOT EXISTS "players" (
+			"id"	INTEGER NOT NULL UNIQUE,
+			"name"	TEXT NOT NULL UNIQUE,
+			"instance"	INT NOT NULL,
+			"x_position"	FLOAT NOT NULL,
+			"y_position"	FLOAT NOT NULL,
+			"statblock_id"	INTEGER NOT NULL,
 			PRIMARY KEY("id" AUTOINCREMENT)
-    )
+			FOREIGN KEY("statblock_id") REFERENCES statblocks(id)
+		)
     )");
+
+		statement = SQLite::Statement(m_databaseConnection,
+		                              R"(
+			CREATE TABLE IF NOT EXISTS statblocks (
+				id 						INTEGER NOT NULL UNIQUE,
+				health 				INTEGER NOT NULL,
+				health_max		INTEGER NOT NULL,
+				health_regen	INTEGER NOT NULL,
+				power					INTEGER NOT NULL,
+				power_max			INTEGER NOT NULL,
+				power_regen		INTEGER NOT NULL,
+				PRIMARY KEY("id" AUTOINCREMENT)
+				)
+		)");
+
 		statement.exec();
 	}
 

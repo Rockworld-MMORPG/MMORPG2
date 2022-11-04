@@ -1,6 +1,4 @@
 #include "Server.hpp"
-#include "Common/Game/WorldEntityName.hpp"
-#include "Common/Game/WorldEntityPosition.hpp"
 #include <Common/Game.hpp>
 
 namespace Server
@@ -15,13 +13,30 @@ namespace Server
 		{
 			auto& name     = server.registry.get<Common::Game::WorldEntityName>(entity);
 			auto& position = server.registry.get<Common::Game::WorldEntityPosition>(entity);
+			auto& stats    = server.registry.get<Common::Game::WorldEntityStats>(entity);
 
-			spdlog::debug("Syncing {} to the database the database - inserting", name.name);
+			spdlog::debug("Syncing {} to the database the database", name.name);
 			auto query = server.databaseManager.createQuery("UPDATE players SET instance=@INSTANCE, x_position=@XPOS, y_position=@YPOS WHERE name=@NAME");
 			query.bind("@NAME", name.name);
 			query.bind("@INSTANCE", position.instanceID);
 			query.bind("@XPOS", position.position.x);
 			query.bind("@YPOS", position.position.y);
+			query.exec();
+
+			query = server.databaseManager.createQuery("SELECT statblock_id FROM players WHERE name=@NAME");
+			query.bind("@NAME", name.name);
+			query.executeStep();
+			auto statblockId = static_cast<std::uint32_t>(query.getColumn(0).getUInt());
+
+			query = server.databaseManager.createQuery("UPDATE statblocks SET health=@HC, health_max=@HM, health_regen=@HR, power=@pc, power_max=@PM, power_regen=@PR WHERE id=@ID");
+			query.bind("@ID", statblockId);
+			query.bind("@HC", stats.health.current);
+			query.bind("@HM", stats.health.max);
+			query.bind("@HR", stats.health.regenRate);
+
+			query.bind("@PC", stats.magic.current);
+			query.bind("@PM", stats.magic.max);
+			query.bind("@PR", stats.magic.regenRate);
 			query.exec();
 		}
 	}
@@ -92,13 +107,30 @@ namespace Server
 		{
 			auto& name     = server.registry.get<Common::Game::WorldEntityName>(message.header.entityID);
 			auto& position = server.registry.get<Common::Game::WorldEntityPosition>(message.header.entityID);
+			auto& stats    = server.registry.get<Common::Game::WorldEntityStats>(message.header.entityID);
 
-			spdlog::debug("Syncing {} to the database the database - inserting", name.name);
+			spdlog::debug("Syncing {} to the database the database", name.name);
 			auto query = server.databaseManager.createQuery("UPDATE players SET instance=@INSTANCE, x_position=@XPOS, y_position=@YPOS WHERE name=@NAME");
 			query.bind("@NAME", name.name);
 			query.bind("@INSTANCE", position.instanceID);
 			query.bind("@XPOS", position.position.x);
 			query.bind("@YPOS", position.position.y);
+			query.exec();
+
+			query = server.databaseManager.createQuery("SELECT statblock_id FROM players WHERE name=@NAME");
+			query.bind("@NAME", name.name);
+			query.executeStep();
+			auto statblockId = static_cast<std::uint32_t>(query.getColumn(0).getUInt());
+
+			query = server.databaseManager.createQuery("UPDATE statblocks SET health=@HC, health_max=@HM, health_regen=@HR, power=@PC, power_max=@PM, power_regen=@PR WHERE id=@ID");
+			query.bind("@ID", statblockId);
+			query.bind("@HC", stats.health.current);
+			query.bind("@HM", stats.health.max);
+			query.bind("@HR", stats.health.regenRate);
+
+			query.bind("@PC", stats.magic.current);
+			query.bind("@PM", stats.magic.max);
+			query.bind("@PR", stats.magic.regenRate);
 			query.exec();
 		}
 
@@ -135,7 +167,7 @@ namespace Server
 		if (query.executeStep())
 		{
 			spdlog::debug("Player {} already exists on the database - fetching", worldEntityName.name);
-			auto instance = static_cast<std::uint32_t>(query.getColumn(2).getInt());
+			auto instance = static_cast<std::uint32_t>(query.getColumn(2).getUInt());
 			sf::Vector2f position{0.0F, 0.0F};
 			position.x = static_cast<float>(query.getColumn(3).getDouble());
 			position.y = static_cast<float>(query.getColumn(4).getDouble());
@@ -143,15 +175,38 @@ namespace Server
 			auto& worldEntityPosition      = server.registry.get<Common::Game::WorldEntityPosition>(message.header.entityID);
 			worldEntityPosition.instanceID = instance;
 			worldEntityPosition.position   = position;
+
+			auto statblockId = static_cast<std::uint32_t>(query.getColumn(5).getUInt());
+			query            = server.databaseManager.createQuery("SELECT * FROM statblocks WHERE id=@ID");
+			query.bind("@ID", statblockId);
+			query.executeStep();
+
+			auto& worldEntityStats            = server.registry.get<Common::Game::WorldEntityStats>(message.header.entityID);
+			auto columns                      = query.getColumns<std::array<uint32_t, 6>, 6>();
+			worldEntityStats.health.current   = static_cast<std::uint32_t>(columns[0]);
+			worldEntityStats.health.max       = static_cast<std::uint32_t>(columns[1]);
+			worldEntityStats.health.regenRate = static_cast<std::uint32_t>(columns[2]);
+
+			worldEntityStats.magic.current   = static_cast<std::uint32_t>(columns[3]);
+			worldEntityStats.magic.max       = static_cast<std::uint32_t>(columns[4]);
+			worldEntityStats.magic.regenRate = static_cast<std::uint32_t>(columns[5]);
 		}
 		else
 		{
 			spdlog::debug("Player {} does not exist on the database - inserting", worldEntityName.name);
-			query = server.databaseManager.createQuery("INSERT INTO players (name, instance, x_position, y_position) VALUES (@NAME, @INSTANCE, @XPOS, @YPOS)");
+			query = server.databaseManager.createQuery("INSERT INTO statblocks (health, health_max, health_regen, power, power_max, power_regen) VALUES (100000, 100000, 1000, 100000, 100000, 1000)");
+			query.exec();
+
+			query = server.databaseManager.createQuery("SELECT id FROM statblocks ORDER_BY column DESC LIMIT 1");
+			query.executeStep();
+			auto statblockId = static_cast<std::uint32_t>(query.getColumn(0).getUInt());
+
+			query = server.databaseManager.createQuery("INSERT INTO players (name, instance, x_position, y_position, statblock_id) VALUES (@NAME, @INSTANCE, @XPOS, @YPOS, @SID)");
 			query.bind("@NAME", username);
 			query.bind("@INSTANCE", 0);
 			query.bind("@XPOS", 0.0);
 			query.bind("@YPOS", 0.0);
+			query.bind("@SID", statblockId);
 			query.exec();
 		}
 
