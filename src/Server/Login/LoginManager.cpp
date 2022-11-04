@@ -52,13 +52,13 @@ namespace Server
 	{
 		spdlog::debug("Authenticating user {}", username);
 
-		auto query = m_databaseManager.createQuery("SELECT salt from login_data WHERE username=@USERNAME");
+		auto query = m_databaseManager.createQuery("SELECT salt FROM login_data WHERE username=@USERNAME");
 		query.bind("@USERNAME", username);
 
-		const auto* salt = "";
+		auto salt = std::string();
 		if (query.executeStep())
 		{
-			salt = query.getColumn(0);
+			salt = query.getColumn(0).getString();
 		}
 		else
 		{
@@ -67,7 +67,7 @@ namespace Server
 
 		auto hashedPassword = hashString(password, salt);
 
-		query = m_databaseManager.createQuery("SELECT * from login_data where username=@USERNAME and password=@PASSWORD");
+		query = m_databaseManager.createQuery("SELECT * FROM login_data WHERE username=@USERNAME AND password=@PASSWORD");
 		query.bind("@USERNAME", username);
 		query.bind("@PASSWORD", hashedPassword);
 
@@ -101,12 +101,18 @@ namespace Server
 
 	auto LoginManager::hashString(const std::string& input, const std::string& salt) -> std::string
 	{
-		std::string output;
-		std::vector<std::uint8_t> vInput(input.begin(), input.end());
-		std::vector<std::uint8_t> vSalt(salt.begin(), salt.end());
+		const auto TIME_COST        = std::uint32_t(2);
+		const auto MEMORY_COST      = std::uint32_t(1 << 16);
+		const auto PARALLELISM_COST = std::uint32_t(1);
+		const auto HASH_LENGTH      = std::uint32_t(32);
 
-		Argon2::id_hash_encoded(3, 1024 * 32, 1, vInput, vSalt, 32, output);
-		return output;
+		auto output = std::vector<uint8_t>(HASH_LENGTH);
+
+		auto vInput = std::vector<std::uint8_t>(input.begin(), input.end());
+		auto vSalt  = std::vector<std::uint8_t>(salt.begin(), salt.end());
+
+		Argon2::id_hash_raw(TIME_COST, MEMORY_COST, PARALLELISM_COST, vInput, vSalt, output);
+		return {output.begin(), output.end()};
 	}
 
 } // namespace Server
