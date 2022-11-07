@@ -24,8 +24,7 @@ target_include_directories(
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PUBLIC ${mmorpg_SOURCE_DIR}/include)
 
-target_link_libraries(mmorpg-client PRIVATE MMORPG::Common SFML::Graphics SFML::Audio nlohmann_json::nlohmann_json
-                                            Discord::GameSDK)
+target_link_libraries(mmorpg-client PRIVATE MMORPG::Common SFML::Graphics SFML::Audio Discord::GameSDK)
 
 target_compile_features(mmorpg-client PRIVATE cxx_std_20)
 

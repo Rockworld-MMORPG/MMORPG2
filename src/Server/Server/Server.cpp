@@ -1,11 +1,48 @@
 #include "Server.hpp"
 #include <Common/Game.hpp>
+#include <nlohmann/json.hpp>
 
 namespace Server
 {
 
 #define SYSTEM_FN(NAME) auto system##NAME(Server& server, const sf::Time deltaTime)->void
 #define HANDLER_FN(NAME) auto handler##NAME(Common::Network::Message& message, Server& server)->void
+
+	auto writePlayerToDatabase(entt::entity entity, entt::registry& registry, DatabaseManager& databaseManager) -> void
+	{
+		auto& name     = registry.get<Common::Game::WorldEntityName>(entity);
+		auto& position = registry.get<Common::Game::WorldEntityPosition>(entity);
+		auto& stats    = registry.get<Common::Game::WorldEntityStats>(entity);
+
+		auto jsSkills = nlohmann::json();
+		jsSkills.emplace("melee", 0);
+		jsSkills.emplace("ranged", 0);
+
+		auto jsWorldPosition = nlohmann::json();
+		jsWorldPosition.emplace("instance", 0);
+		jsWorldPosition.emplace("position", std::array<float, 2>{position.position.x, position.position.y});
+
+		auto jsStats = nlohmann::json();
+		jsStats.emplace("health", std::array<std::uint32_t, 3>{stats.health.current, stats.health.max, stats.health.regenRate});
+		jsStats.emplace("power", std::array<std::uint32_t, 3>{stats.power.current, stats.power.max, stats.power.regenRate});
+
+		auto query = nlohmann::json();
+		query.emplace("world_position", jsWorldPosition);
+		query.emplace("stats", jsStats);
+		query.emplace("skills", jsSkills);
+		query.emplace("name", name.name);
+
+		databaseManager.replace("rockworld_testing", "players", nlohmann::json::parse("{\"name\": \"" + name.name + "\"}"), query);
+	}
+
+	SYSTEM_FN(DatabaseSync)
+	{
+		for (const auto entity : server.registry.view<Common::Game::WorldEntityPosition>())
+		{
+			spdlog::debug("Syncing {} to the database the database", static_cast<std::uint32_t>(entity));
+			writePlayerToDatabase(entity, server.registry, server.databaseManager);
+		}
+	}
 
 	SYSTEM_FN(PlayerMovement)
 	{
@@ -69,6 +106,16 @@ namespace Server
 		server.networkManager.pushMessage(Common::Network::Protocol::TCP, Common::Network::MessageType::Server_Disconnect, message.header.entityID, data);
 		server.networkManager.markForDisconnect(message.header.entityID);
 
+		if (server.registry.all_of<Common::Game::WorldEntityPosition>(message.header.entityID))
+		{
+			auto& name     = server.registry.get<Common::Game::WorldEntityName>(message.header.entityID);
+			auto& position = server.registry.get<Common::Game::WorldEntityPosition>(message.header.entityID);
+			auto& stats    = server.registry.get<Common::Game::WorldEntityStats>(message.header.entityID);
+
+			spdlog::debug("Syncing {} to the database", name.name);
+			writePlayerToDatabase(message.header.entityID, server.registry, server.databaseManager);
+		}
+
 		if (server.registry.all_of<Login::UserData>(message.header.entityID))
 		{
 			server.loginManager.logout(server.registry.get<Login::UserData>(message.header.entityID).username);
@@ -96,6 +143,53 @@ namespace Server
 		Common::Game::createWorldEntity(server.registry, message.header.entityID, {});
 		auto& worldEntityName = server.registry.get<Common::Game::WorldEntityName>(message.header.entityID);
 		worldEntityName.name  = username;
+
+		auto optPlayerData = server.databaseManager.get("rockworld_testing", "players", nlohmann::json::parse("{\"name\": \"" + username + "\"}"));
+		if (optPlayerData.has_value())
+		{
+			spdlog::debug("Player {} already exists on the database - fetching", worldEntityName.name);
+			auto jsWorldPosition = optPlayerData->at("world_position");
+			auto jsStats         = optPlayerData->at("stats");
+			auto jsSkills        = optPlayerData->at("skills");
+
+			auto& worldEntityPosition = server.registry.get<Common::Game::WorldEntityPosition>(message.header.entityID);
+			auto& worldEntityStats    = server.registry.get<Common::Game::WorldEntityStats>(message.header.entityID);
+
+			worldEntityPosition.instanceID = jsWorldPosition.at("instance").get<std::uint32_t>();
+			worldEntityPosition.position.x = jsWorldPosition.at("position").at(0).get<float>();
+			worldEntityPosition.position.y = jsWorldPosition.at("position").at(1).get<float>();
+
+			worldEntityStats.health.current   = jsStats.at("health").at(0).get<std::uint32_t>();
+			worldEntityStats.health.max       = jsStats.at("health").at(1).get<std::uint32_t>();
+			worldEntityStats.health.regenRate = jsStats.at("health").at(2).get<std::uint32_t>();
+
+			worldEntityStats.power.current   = jsStats.at("power").at(0).get<std::uint32_t>();
+			worldEntityStats.power.max       = jsStats.at("power").at(1).get<std::uint32_t>();
+			worldEntityStats.power.regenRate = jsStats.at("power").at(2).get<std::uint32_t>();
+		}
+		else
+		{
+			spdlog::debug("Player {} does not exist on the database - inserting", worldEntityName.name);
+			auto query = nlohmann::json::parse(
+			    R"(
+			{
+				"world_position": {
+					"instance": 0,
+					"position": [0.0, 0.0]
+				},
+				"stats": {
+					"health": [100000, 100000, 1000],
+					"power": [100000, 100000, 1000]
+				},
+				"skills": {
+					"melee": 0,
+					"ranged": 0
+				}
+			}
+				)");
+			query.emplace("name", username);
+			server.databaseManager.insert("rockworld_testing", "players", query);
+		}
 
 		auto data = Common::Network::MessageData();
 		data << message.header.entityID;
@@ -204,11 +298,10 @@ namespace Server
 #undef HANDLER_FN
 
 	Server::Server(const std::filesystem::path& executableDirectory) :
-	    databaseManager("database.db"),
+	    databaseManager(),
 	    loginManager(databaseManager),
 	    networkManager(*this)
 	{
-		databaseManager.createTables();
 		loginManager.createUser("admin", "password");
 
 		m_clock.restart();
@@ -216,6 +309,7 @@ namespace Server
 
 		addSystem(systemPlayerMovement, sf::milliseconds(50));
 		addSystem(systemBroadcastMovement, sf::milliseconds(50));
+		addSystem(systemDatabaseSync, sf::seconds(300));
 
 		using MT
 		    = Common::Network::MessageType;

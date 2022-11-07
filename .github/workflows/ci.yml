@@ -19,7 +19,7 @@ jobs:
     name: ${{ matrix.platform.name }}
     runs-on: ${{ matrix.platform.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         platform:
           - { name: "Windows (MSVC)", os: windows-latest }
@@ -60,6 +60,11 @@ jobs:
       - name: Create Build Directory
         shell: bash
         run: if [ ! -d '${{ github.workspace }}/build' ]; then mkdir '${{ github.workspace }}/build'; fi
+
+      # Configure CMake to generate MongoCXX targets
+      - name: Configure CMake to Generate MongoCXX Targets
+        shell: bash
+        run: cmake -S '${{ github.workspace }}' -B '${{ github.workspace }}/build'
 
       # Configure CMake
       - name: Configure CMake

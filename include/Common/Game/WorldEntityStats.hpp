@@ -11,7 +11,7 @@ namespace Common::Game
 	struct COMMON_API StatBlock : Network::SerialisedComponent<StatBlock>
 	{
 		std::uint32_t max       = 100'000;
-		std::uint32_t current   = 0;
+		std::uint32_t current   = max;
 		std::uint32_t regenRate = 1'000;
 
 		auto serialise(Network::MessageData& data) -> void;
@@ -25,7 +25,7 @@ namespace Common::Game
 	struct COMMON_API WorldEntityStats : Network::SerialisedComponent<WorldEntityStats>
 	{
 		StatBlock health;
-		StatBlock magic;
+		StatBlock power;
 
 		auto serialise(Network::MessageData& data) -> void;
 		auto deserialise(Network::MessageData& data) -> void;

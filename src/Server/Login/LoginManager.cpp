@@ -1,6 +1,9 @@
 #include "Login/LoginManager.hpp"
 #include "entt/core/hashed_string.hpp"
 #include <Argon2/Argon2.hpp>
+#include <bsoncxx/builder/stream/document.hpp>
+#include <bsoncxx/json.hpp>
+#include <nlohmann/json.hpp>
 #include <random>
 
 namespace Server
@@ -13,16 +16,16 @@ namespace Server
 
 	auto LoginManager::createUser(const std::string& username, const std::string& password) -> Login::CreateResult
 	{
-		spdlog::debug("Creating login for {}", username);
+		auto filter = nlohmann::json();
+		filter.emplace("username", username);
 
-		auto query = m_databaseManager.createQuery("SELECT * from login_data WHERE username=@USERNAME");
-		query.bind("@USERNAME", username);
-
-		if (query.executeStep())
+		auto optData = m_databaseManager.get("rockworld_testing", "logins", filter);
+		if (optData.has_value())
 		{
-			spdlog::debug("Login already exists");
 			return Login::CreateResult::UsernameTaken;
 		}
+
+		spdlog::debug("Creating login for {}", username);
 
 		auto randomEngine = std::mt19937_64();
 		auto salt         = std::string();
@@ -34,16 +37,13 @@ namespace Server
 		}
 
 		auto hashedPassword = hashString(password, salt);
+		auto json           = nlohmann::json();
+		json.emplace("username", username);
+		json.emplace("salt", std::vector<std::uint8_t>(salt.begin(), salt.end()));
+		json.emplace("password", std::vector<std::uint8_t>(hashedPassword.begin(), hashedPassword.end()));
 
-		query = m_databaseManager.createQuery("INSERT INTO login_data (username, password, salt) VALUES (@USERNAME, @PASSWORD, @SALT)");
-		query.bind("@USERNAME", username);
-		query.bind("@PASSWORD", hashedPassword);
-		query.bind("@SALT", salt);
-		if (query.exec() != 1)
-		{
-			spdlog::warn("Failed to create user {}", username);
-			return Login::CreateResult::UsernameTaken;
-		}
+		m_databaseManager.insert("rockworld_testing", "logins", json);
+
 
 		return Login::CreateResult::Created;
 	}
@@ -52,27 +52,39 @@ namespace Server
 	{
 		spdlog::debug("Authenticating user {}", username);
 
-		auto query = m_databaseManager.createQuery("SELECT salt from login_data WHERE username=@USERNAME");
-		query.bind("@USERNAME", username);
-
-		const auto* salt = "";
-		if (query.executeStep())
+		if (isLoggedIn(username))
 		{
-			salt = query.getColumn(0);
+			spdlog::debug("Username is already logged in");
+			return Login::AuthenticationResult::AlreadyLoggedIn;
 		}
-		else
+
+		auto query     = nlohmann::json::parse("{\"username\": \"" + username + "\"}");
+		auto optResult = m_databaseManager.get("rockworld_testing", "logins", query);
+		if (!optResult.has_value())
 		{
+			spdlog::debug("User does not exist");
 			return Login::AuthenticationResult::InvalidUsername;
+		}
+
+		auto salt = std::string();
+		salt.reserve(32);
+		for (const auto& value : optResult->at("salt"))
+		{
+			salt.push_back(value.get<std::uint8_t>());
 		}
 
 		auto hashedPassword = hashString(password, salt);
 
-		query = m_databaseManager.createQuery("SELECT * from login_data where username=@USERNAME and password=@PASSWORD");
-		query.bind("@USERNAME", username);
-		query.bind("@PASSWORD", hashedPassword);
+		auto remotePassword = std::string();
 
-		if (!query.executeStep())
+		for (const auto& value : optResult->at("password"))
 		{
+			remotePassword.push_back(value.get<std::uint8_t>());
+		}
+
+		if (hashedPassword != remotePassword)
+		{
+			spdlog::debug("Invalid password");
 			return Login::AuthenticationResult::InvalidPassword;
 		}
 
@@ -101,12 +113,18 @@ namespace Server
 
 	auto LoginManager::hashString(const std::string& input, const std::string& salt) -> std::string
 	{
-		std::string output;
-		std::vector<std::uint8_t> vInput(input.begin(), input.end());
-		std::vector<std::uint8_t> vSalt(salt.begin(), salt.end());
+		const auto TIME_COST        = std::uint32_t(2);
+		const auto MEMORY_COST      = std::uint32_t(1 << 16);
+		const auto PARALLELISM_COST = std::uint32_t(1);
+		const auto HASH_LENGTH      = std::uint32_t(32);
 
-		Argon2::id_hash_encoded(3, 1024 * 32, 1, vInput, vSalt, 32, output);
-		return output;
+		auto output = std::vector<uint8_t>(HASH_LENGTH);
+
+		auto vInput = std::vector<std::uint8_t>(input.begin(), input.end());
+		auto vSalt  = std::vector<std::uint8_t>(salt.begin(), salt.end());
+
+		Argon2::id_hash_raw(TIME_COST, MEMORY_COST, PARALLELISM_COST, vInput, vSalt, output);
+		return {output.begin(), output.end()};
 	}
 
 } // namespace Server
