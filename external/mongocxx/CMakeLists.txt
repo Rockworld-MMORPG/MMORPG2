@@ -1,5 +1,10 @@
 set(CMAKE_CXX_STANDARD 20)
 
+if(MSVC)
+  message(STATUS "Using MSVC - enabling __cplusplus macro")
+  add_compile_options(-DCMAKE_CXX_FLAGS="/Zc:__cplusplus")
+endif()
+
 set(ENABLE_TESTS
     OFF
     CACHE BOOL "" FORCE)
