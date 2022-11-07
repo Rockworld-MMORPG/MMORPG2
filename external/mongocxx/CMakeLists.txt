@@ -2,7 +2,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 if(MSVC)
   message(STATUS "Using MSVC - enabling __cplusplus macro")
-  add_compile_options(-DCMAKE_CXX_FLAGS="/Zc:__cplusplus")
+  add_compile_options(/Zc:__cplusplus)
 
   set(ENABLE_EXTRA_ALIGNMENT
       OFF
