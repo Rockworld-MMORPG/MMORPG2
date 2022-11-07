@@ -1,5 +1,6 @@
 #include "Server.hpp"
 #include <Common/Game.hpp>
+#include <nlohmann/json.hpp>
 
 namespace Server
 {

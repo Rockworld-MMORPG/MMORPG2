@@ -2,7 +2,7 @@
 
 #include <bsoncxx/document/view.hpp>
 #include <mongocxx/client.hpp>
-#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 
 namespace Server
 {

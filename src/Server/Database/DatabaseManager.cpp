@@ -5,6 +5,7 @@
 #include <bsoncxx/view_or_value.hpp>
 #include <mongocxx/instance.hpp>
 #include <mongocxx/logger.hpp>
+#include <nlohmann/json.hpp>
 
 namespace Server
 {
