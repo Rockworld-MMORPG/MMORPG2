@@ -26,11 +26,15 @@ fetchcontent_declare(
 
 fetchcontent_makeavailable(mongo-cxx-driver)
 
-set(bsoncxx_DIR ${mongo-cxx-driver_BINARY_DIR}/src/bsoncxx)
-find_package(bsoncxx CONFIG)
+if(EXISTS ${mongo-cxx-driver_BINARY_DIR}/src/bsoncxx/bsoncxx_targets.cmake)
+  set(bsoncxx_DIR ${mongo-cxx-driver_BINARY_DIR}/src/bsoncxx)
+  find_package(bsoncxx CONFIG)
+endif()
 
-set(mongocxx_DIR ${mongo-cxx-driver_BINARY_DIR}/src/mongocxx)
-find_package(mongocxx CONFIG)
+if(EXISTS ${mongo-cxx-driver_BINARY_DIR}/src/mongocxx/mongocxx_targets.cmake)
+  set(mongocxx_DIR ${mongo-cxx-driver_BINARY_DIR}/src/mongocxx)
+  find_package(mongocxx CONFIG)
+endif()
 
 add_library(mongocxx_interface INTERFACE)
 add_library(Mongo::MongoCXX ALIAS mongocxx_interface)
