@@ -38,4 +38,9 @@ endif()
 
 add_library(mongocxx_interface INTERFACE)
 add_library(Mongo::MongoCXX ALIAS mongocxx_interface)
-target_link_libraries(mongocxx_interface INTERFACE mongo::mongocxx_shared)
+
+if(${bsoncxx_FOUND} AND ${mongocxx_FOUND})
+  target_link_libraries(mongocxx_interface INTERFACE mongo::mongocxx_shared)
+else()
+  message(WARNING "mongocxx and bsoncxx targets have been created - re-run CMake")
+endif()
