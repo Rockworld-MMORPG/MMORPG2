@@ -1,63 +1,130 @@
 #include "Database/DatabaseManager.hpp"
-#include "SQLiteCpp/Database.h"
+#include "Database/Secrets.hpp"
+#include "mongocxx/options/tls.hpp"
+#include <bsoncxx/json.hpp>
+#include <bsoncxx/view_or_value.hpp>
+#include <mongocxx/instance.hpp>
+#include <mongocxx/logger.hpp>
 
 namespace Server
 {
 
-	DatabaseManager::DatabaseManager(const std::filesystem::path& databasePath) :
-	    m_databaseConnection(databasePath, SQLite::OPEN_READWRITE)
+	class DBLogger : public mongocxx::logger
 	{
+		auto operator()(mongocxx::log_level level, mongocxx::stdx::string_view domain, mongocxx::stdx::string_view message) noexcept -> void override
+		{
+			switch (level)
+			{
+				case mongocxx::log_level::k_error:
+					spdlog::error("MongoDB({}): {}", domain, message);
+					break;
+				case mongocxx::log_level::k_critical:
+					spdlog::critical("MongoDB({}): {}", domain, message);
+					break;
+				case mongocxx::log_level::k_warning:
+					spdlog::warn("MongoDB({}): {}", domain, message);
+					break;
+				case mongocxx::log_level::k_message:
+					spdlog::info("MongoDB({}): {}", domain, message);
+					break;
+				case mongocxx::log_level::k_info:
+					spdlog::info("MongoDB({}): {}", domain, message);
+					break;
+				case mongocxx::log_level::k_debug:
+					spdlog::debug("MongoDB({}): {}", domain, message);
+					break;
+				case mongocxx::log_level::k_trace:
+					spdlog::trace("MongoDB({}): {}", domain, message);
+					break;
+			}
+		}
+	};
+
+	DatabaseManager::DatabaseManager()
+	{
+		static bool instanceCreated = false;
+		if (!instanceCreated)
+		{
+			spdlog::debug("Creating MongoDB instance");
+			mongocxx::instance::current() = mongocxx::instance(std::make_unique<DBLogger>());
+			instanceCreated               = true;
+		}
+
+		connect();
 	}
 
-	auto DatabaseManager::createTables() -> void
+
+	auto DatabaseManager::connect() -> void
 	{
-		auto statement = SQLite::Statement(m_databaseConnection,
-		                                   R"(
-    CREATE TABLE IF NOT EXISTS login_data (
-      id        INTEGER		NOT NULL	UNIQUE,
-      username  TEXT			NOT NULL	UNIQUE,
-      password  TEXT			NOT NULL,
-      salt      TEXT			NOT NULL,
-			PRIMARY KEY("id" AUTOINCREMENT)
-    )
-    )");
-		statement.exec();
+		spdlog::debug("Connecting to database");
+		auto uri = mongocxx::uri(Database::getConnectionString());
+		m_client = mongocxx::client(uri);
 
-		statement = SQLite::Statement(m_databaseConnection,
-		                              R"(
-    CREATE TABLE IF NOT EXISTS "players" (
-			"id"	INTEGER NOT NULL UNIQUE,
-			"name"	TEXT NOT NULL UNIQUE,
-			"instance"	INT NOT NULL,
-			"x_position"	FLOAT NOT NULL,
-			"y_position"	FLOAT NOT NULL,
-			"statblock_id"	INTEGER NOT NULL,
-			PRIMARY KEY("id" AUTOINCREMENT)
-			FOREIGN KEY("statblock_id") REFERENCES statblocks(id)
-		)
-    )");
-
-		statement = SQLite::Statement(m_databaseConnection,
-		                              R"(
-			CREATE TABLE IF NOT EXISTS statblocks (
-				id 						INTEGER NOT NULL UNIQUE,
-				health 				INTEGER NOT NULL,
-				health_max		INTEGER NOT NULL,
-				health_regen	INTEGER NOT NULL,
-				power					INTEGER NOT NULL,
-				power_max			INTEGER NOT NULL,
-				power_regen		INTEGER NOT NULL,
-				PRIMARY KEY("id" AUTOINCREMENT)
-				)
-		)");
-
-		statement.exec();
+		for (auto database : m_client.list_databases())
+		{
+			spdlog::debug(bsoncxx::to_json(database));
+		}
 	}
 
-	auto DatabaseManager::createQuery(const std::string& query) -> SQLite::Statement
+	/**
+	 * \brief Insert an object into a database
+	 *
+	 * \param databaseName The name of the database to insert into
+	 * \param tableName The name of the table to insert into
+	 * \param data The data to insert into the table
+	 */
+	auto DatabaseManager::insert(std::string databaseName, std::string tableName, nlohmann::json data) -> void
 	{
-		auto statement = SQLite::Statement(m_databaseConnection, query);
-		return statement;
+		auto database   = m_client.database(databaseName);
+		auto collection = database.collection(tableName);
+
+		collection.insert_one(bsoncxx::from_json(data.dump()));
+	}
+
+	/**
+	 * \brief Update an object in the database
+	 *
+	 * \param databaseName The name of the database to update
+	 * \param tableName The name of the table to update
+	 * \param data The data to update in the table
+	 */
+	auto DatabaseManager::update(std::string databaseName, std::string tableName, nlohmann::json filter, mongocxx::pipeline update) -> void
+	{
+		auto database   = m_client.database(databaseName);
+		auto collection = database.collection(tableName);
+
+		collection.update_one(bsoncxx::from_json(filter.dump()), update);
+	}
+
+	auto DatabaseManager::replace(std::string databaseName, std::string tableName, nlohmann::json filter, nlohmann::json data) -> void
+	{
+		auto database   = m_client.database(databaseName);
+		auto collection = database.collection(tableName);
+
+		collection.replace_one(bsoncxx::from_json(filter.dump()), bsoncxx::from_json(data.dump()));
+	}
+
+	/**
+	 * \brief Insert an object into a database
+	 *
+	 * \param databaseName The name of the database to insert into
+	 * \param tableName The name of the table to insert into
+	 * \param data The data to insert into the table
+	 *
+	 * \return A BSON document containing the requested document's data
+	 */
+	auto DatabaseManager::get(std::string databaseName, std::string tableName, nlohmann::json filter) -> std::optional<nlohmann::json>
+	{
+		auto database   = m_client.database(databaseName);
+		auto collection = database.collection(tableName);
+
+		auto optBSON = collection.find_one(bsoncxx::from_json(filter.dump()));
+		if (optBSON.has_value())
+		{
+			return nlohmann::json::parse(bsoncxx::to_json(*optBSON));
+		}
+
+		return {};
 	}
 
 } // namespace Server

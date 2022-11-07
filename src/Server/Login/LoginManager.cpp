@@ -1,6 +1,9 @@
 #include "Login/LoginManager.hpp"
 #include "entt/core/hashed_string.hpp"
 #include <Argon2/Argon2.hpp>
+#include <bsoncxx/builder/stream/document.hpp>
+#include <bsoncxx/json.hpp>
+#include <nlohmann/json.hpp>
 #include <random>
 
 namespace Server
@@ -13,16 +16,16 @@ namespace Server
 
 	auto LoginManager::createUser(const std::string& username, const std::string& password) -> Login::CreateResult
 	{
-		spdlog::debug("Creating login for {}", username);
+		auto filter = nlohmann::json();
+		filter.emplace("username", username);
 
-		auto query = m_databaseManager.createQuery("SELECT * from login_data WHERE username=@USERNAME");
-		query.bind("@USERNAME", username);
-
-		if (query.executeStep())
+		auto optData = m_databaseManager.get("rockworld_testing", "logins", filter);
+		if (optData.has_value())
 		{
-			spdlog::debug("Login already exists");
 			return Login::CreateResult::UsernameTaken;
 		}
+
+		spdlog::debug("Creating login for {}", username);
 
 		auto randomEngine = std::mt19937_64();
 		auto salt         = std::string();
@@ -34,16 +37,13 @@ namespace Server
 		}
 
 		auto hashedPassword = hashString(password, salt);
+		auto json           = nlohmann::json();
+		json.emplace("username", username);
+		json.emplace("salt", std::vector<std::uint8_t>(salt.begin(), salt.end()));
+		json.emplace("password", std::vector<std::uint8_t>(hashedPassword.begin(), hashedPassword.end()));
 
-		query = m_databaseManager.createQuery("INSERT INTO login_data (username, password, salt) VALUES (@USERNAME, @PASSWORD, @SALT)");
-		query.bind("@USERNAME", username);
-		query.bind("@PASSWORD", hashedPassword);
-		query.bind("@SALT", salt);
-		if (query.exec() != 1)
-		{
-			spdlog::warn("Failed to create user {}", username);
-			return Login::CreateResult::UsernameTaken;
-		}
+		m_databaseManager.insert("rockworld_testing", "logins", json);
+
 
 		return Login::CreateResult::Created;
 	}
@@ -52,27 +52,39 @@ namespace Server
 	{
 		spdlog::debug("Authenticating user {}", username);
 
-		auto query = m_databaseManager.createQuery("SELECT salt FROM login_data WHERE username=@USERNAME");
-		query.bind("@USERNAME", username);
+		if (isLoggedIn(username))
+		{
+			spdlog::debug("Username is already logged in");
+			return Login::AuthenticationResult::AlreadyLoggedIn;
+		}
+
+		auto query     = nlohmann::json::parse("{\"username\": \"" + username + "\"}");
+		auto optResult = m_databaseManager.get("rockworld_testing", "logins", query);
+		if (!optResult.has_value())
+		{
+			spdlog::debug("User does not exist");
+			return Login::AuthenticationResult::InvalidUsername;
+		}
 
 		auto salt = std::string();
-		if (query.executeStep())
+		salt.reserve(32);
+		for (const auto& value : optResult->at("salt"))
 		{
-			salt = query.getColumn(0).getString();
-		}
-		else
-		{
-			return Login::AuthenticationResult::InvalidUsername;
+			salt.push_back(value.get<std::uint8_t>());
 		}
 
 		auto hashedPassword = hashString(password, salt);
 
-		query = m_databaseManager.createQuery("SELECT * FROM login_data WHERE username=@USERNAME AND password=@PASSWORD");
-		query.bind("@USERNAME", username);
-		query.bind("@PASSWORD", hashedPassword);
+		auto remotePassword = std::string();
 
-		if (!query.executeStep())
+		for (const auto& value : optResult->at("password"))
 		{
+			remotePassword.push_back(value.get<std::uint8_t>());
+		}
+
+		if (hashedPassword != remotePassword)
+		{
+			spdlog::debug("Invalid password");
 			return Login::AuthenticationResult::InvalidPassword;
 		}
 

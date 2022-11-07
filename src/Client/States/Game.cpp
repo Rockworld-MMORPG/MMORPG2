@@ -307,7 +307,7 @@ namespace Client::States
 		{
 			auto& stats          = m_registry.get<Common::Game::WorldEntityStats>(entity);
 			stats.health.current = std::clamp(stats.health.current + (stats.health.regenRate * deltaTime.asMilliseconds()) / 1'000, std::uint32_t(0), stats.health.max);
-			stats.magic.current  = std::clamp(stats.magic.current + (stats.magic.regenRate * deltaTime.asMilliseconds()) / 1'000, std::uint32_t(0), stats.magic.max);
+			stats.power.current  = std::clamp(stats.power.current + (stats.power.regenRate * deltaTime.asMilliseconds()) / 1'000, std::uint32_t(0), stats.power.max);
 		}
 
 		for (const auto entity : m_registry.view<sf::Sprite, Common::Input::InputState>())
@@ -321,7 +321,7 @@ namespace Client::States
 				auto& stats = m_registry.get<Common::Game::WorldEntityStats>(entity);
 
 				auto healthText = fmt::format("Health [ {} / {} ]", stats.health.current / 1'000, stats.health.max / 1'000);
-				auto magicText  = fmt::format("Power [ {} / {} ]", stats.magic.current / 1'000, stats.magic.max / 1'000);
+				auto magicText  = fmt::format("Power [ {} / {} ]", stats.power.current / 1'000, stats.power.max / 1'000);
 
 				m_camera.setCenter(sprite.getPosition() + sprite.getGlobalBounds().getSize() * 0.5F);
 				m_registry.get<sf::Text>(m_healthTextEntity).setString(healthText);

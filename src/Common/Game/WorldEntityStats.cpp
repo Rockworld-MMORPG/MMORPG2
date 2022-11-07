@@ -16,13 +16,13 @@ namespace Common::Game
 	auto WorldEntityStats::serialise(Network::MessageData& data) -> void
 	{
 		health.serialise(data);
-		magic.serialise(data);
+		power.serialise(data);
 	}
 
 	auto WorldEntityStats::deserialise(Network::MessageData& data) -> void
 	{
 		health.deserialise(data);
-		magic.deserialise(data);
+		power.deserialise(data);
 	}
 
 } // namespace Common::Game

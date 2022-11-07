@@ -6,6 +6,7 @@ target_sources(
   PRIVATE Main.cpp
           Version.cpp
           Database/DatabaseManager.cpp
+          Database/Secrets.cpp
           Login/LoginManager.cpp
           Network/NetworkManager.cpp
           Server/Server.cpp
@@ -27,5 +28,13 @@ set_target_properties(
                            SOVERSION ${SERVER_VERSION_MAJOR})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Version.cpp.in ${CMAKE_CURRENT_SOURCE_DIR}/Version.cpp)
 
-target_link_libraries(mmorpg-server PRIVATE MMORPG::Common Argon2::Argon2-Hpp SQLiteCpp sqlite3)
+set(SERVER_DATABASE_URI $ENV{MONGODB_URI})
+set(SERVER_DATABASE_CONNECTION_STRING $ENV{MONGODB_CONNECTION_STRING})
+set(SERVER_DATABASE_USERNAME $ENV{MONGODB_USERNAME})
+set(SERVER_DATABASE_PASSWORD $ENV{MONGODB_PASSWORD})
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Database/Secrets.cpp.in ${CMAKE_CURRENT_SOURCE_DIR}/Database/Secrets.cpp)
+
+target_link_libraries(mmorpg-server PRIVATE MMORPG::Common Argon2::Argon2-Hpp Mongo::MongoCXX)
+
 target_compile_features(mmorpg-server PRIVATE cxx_std_20)
