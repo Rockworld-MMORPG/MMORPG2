@@ -61,6 +61,11 @@ jobs:
         shell: bash
         run: if [ ! -d '${{ github.workspace }}/build' ]; then mkdir '${{ github.workspace }}/build'; fi
 
+      # Configure CMake to generate MongoCXX targets
+      - name: Configure CMake to Generate MongoCXX Targets
+        shell: bash
+        run: cmake -S '${{ github.workspace }}' -B '${{ github.workspace }}/build'
+
       # Configure CMake
       - name: Configure CMake
         shell: bash
