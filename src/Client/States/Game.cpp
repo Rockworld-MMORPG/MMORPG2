@@ -1,6 +1,4 @@
 #include "States/Game.hpp"
-#include "Common/Game/WorldEntityStats.hpp"
-#include "Common/Network/MessageData.hpp"
 #include "Discord/DiscordManager.hpp"
 #include "Engine/Engine.hpp"
 #include "Graphics/TextureAtlas.hpp"
@@ -95,6 +93,8 @@ namespace Client::States
 		engine.inputManager.bindAction(sf::Keyboard::A, Common::Input::ActionType::StrafeLeft);
 		engine.inputManager.bindAction(sf::Keyboard::S, Common::Input::ActionType::MoveBackward);
 		engine.inputManager.bindAction(sf::Keyboard::D, Common::Input::ActionType::StrafeRight);
+		engine.inputManager.bindAction(sf::Keyboard::Space, Common::Input::ActionType::Use);
+		engine.inputManager.bindAction(sf::Keyboard::Z, Common::Input::ActionType::Attack);
 
 		const auto& testLevel = engine.assetManager.getAsset("test_level");
 		m_level               = Common::World::Level(testLevel);
