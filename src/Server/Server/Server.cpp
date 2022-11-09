@@ -54,25 +54,47 @@ namespace Server
 			auto& worldPositionComponent = server.registry.get<Common::Game::WorldEntityPosition>(entity);
 			auto& inputComponent         = server.registry.get<Common::Input::InputState>(entity);
 
-			sf::Vector2f delta{0.0F, 0.0F};
+			worldPositionComponent.direction.x = 0;
+			worldPositionComponent.direction.y = 0;
+
 			if (inputComponent.forwards)
 			{
-				delta.y -= 200.0F * fDt;
+				worldPositionComponent.position.y -= 200.0F * fDt;
+				worldPositionComponent.direction.y = -1;
 			}
 			if (inputComponent.backwards)
 			{
-				delta.y += 200.0F * fDt;
+				worldPositionComponent.position.y += 200.0F * fDt;
+				worldPositionComponent.direction.y = 1;
 			}
 			if (inputComponent.left)
 			{
-				delta.x -= 200.0F * fDt;
+				worldPositionComponent.position.x -= 200.0F * fDt;
+				worldPositionComponent.direction.x = 1;
 			}
 			if (inputComponent.right)
 			{
-				delta.x += 200.0F * fDt;
+				worldPositionComponent.position.x += 200.0F * fDt;
+				worldPositionComponent.direction.x = -1;
 			}
 
-			worldPositionComponent.position += delta;
+			if (worldPositionComponent.direction.x == 0 && worldPositionComponent.direction.y == 0)
+			{
+				worldPositionComponent.direction.x = 1;
+			}
+		}
+	}
+
+	SYSTEM_FN(TickGCDs)
+	{
+		for (const auto entity : server.registry.view<Common::Game::WorldEntityGCD>())
+		{
+			auto& gcd = server.registry.get<Common::Game::WorldEntityGCD>(entity);
+			gcd.currentTime -= deltaTime;
+			if (gcd.currentTime.asMicroseconds() < 0)
+			{
+				gcd.currentTime = sf::Time::Zero;
+			}
 		}
 	}
 
@@ -88,6 +110,18 @@ namespace Server
 				server.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Server_InputState, data);
 				inputState.changed = false;
 			}
+		}
+	}
+
+	SYSTEM_FN(BroadcastHealth)
+	{
+		for (const auto entity : server.registry.view<Common::Game::WorldEntityStats>())
+		{
+			auto& stats = server.registry.get<Common::Game::WorldEntityStats>(entity);
+
+			auto data = Common::Network::MessageData();
+			stats.serialise(data);
+			server.networkManager.pushMessage(Common::Network::Protocol::UDP, Common::Network::MessageType::Server_Stats, data);
 		}
 	}
 
@@ -231,6 +265,58 @@ namespace Server
 				inputState.right = (action.state == Common::Input::Action::State::Begin);
 			}
 			break;
+			case Common::Input::ActionType::Attack:
+			{
+				auto& entityPosition = server.registry.get<Common::Game::WorldEntityPosition>(message.header.entityID);
+				auto& entityGCD      = server.registry.get<Common::Game::WorldEntityGCD>(message.header.entityID);
+
+				if (entityGCD.currentTime.asMicroseconds() > 0)
+				{
+					break;
+				}
+
+				entityGCD.currentTime = entityGCD.resetTime;
+
+				const auto MAX_DISTANCE = 1000.0F;
+				auto distance           = 0.0F;
+
+				auto position   = entityPosition.position;
+				auto fDirection = sf::Vector2f(100.0F * static_cast<float>(entityPosition.direction.x), 100.0F * static_cast<float>(entityPosition.direction.y));
+				auto length     = fDirection.lengthSq();
+
+				while (distance < MAX_DISTANCE * MAX_DISTANCE)
+				{
+					distance += length;
+					position += fDirection;
+
+					for (const auto entity : server.registry.view<Common::Game::WorldEntityCollider, Common::Game::WorldEntityPosition>())
+					{
+						auto& otherPosition = server.registry.get<Common::Game::WorldEntityPosition>(entity);
+						auto& otherCollider = server.registry.get<Common::Game::WorldEntityCollider>(entity);
+
+						if ((position.x > otherPosition.position.x) || (position.x < otherPosition.position.x + otherCollider.size.x))
+						{
+							continue;
+						}
+						if ((position.y < otherPosition.position.y) || (position.y > otherPosition.position.y + otherCollider.size.y))
+						{
+							continue;
+						}
+
+						if (server.registry.all_of<Common::Game::WorldEntityStats>(entity))
+						{
+							auto& stats = server.registry.get<Common::Game::WorldEntityStats>(entity);
+							stats.health.current -= stats.health.regenRate * 20;
+							break;
+						}
+					}
+				}
+			}
+			break;
+			case Common::Input::ActionType::Use:
+			{
+			}
+			break;
 			default:
 				break;
 		}
@@ -302,13 +388,16 @@ namespace Server
 	    loginManager(databaseManager),
 	    networkManager(*this)
 	{
-		loginManager.createUser("admin", "password");
+		loginManager.createUser("gary", "password");
+		loginManager.createUser("dave", "password");
 
 		m_clock.restart();
 		networkManager.init();
 
+		addSystem(systemTickGCDs);
 		addSystem(systemPlayerMovement, sf::milliseconds(50));
 		addSystem(systemBroadcastMovement, sf::milliseconds(50));
+		addSystem(systemBroadcastHealth, sf::milliseconds(50));
 		addSystem(systemDatabaseSync, sf::seconds(300));
 
 		using MT

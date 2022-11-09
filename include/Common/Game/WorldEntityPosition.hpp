@@ -14,6 +14,7 @@ namespace Common::Game
 	{
 		std::uint32_t instanceID = 0;
 		sf::Vector2f position;
+		sf::Vector2<std::int8_t> direction;
 
 		auto serialise(Network::MessageData& data) -> void;
 		auto deserialise(Network::MessageData& data) -> void;

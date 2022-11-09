@@ -20,22 +20,38 @@ namespace Common::Network
 		MessageData();
 
 		auto operator<<(bool value) -> MessageData&;
+
 		auto operator<<(std::uint8_t value) -> MessageData&;
 		auto operator<<(std::uint16_t value) -> MessageData&;
 		auto operator<<(std::uint32_t value) -> MessageData&;
 		auto operator<<(std::uint64_t value) -> MessageData&;
+
+		auto operator<<(std::int8_t value) -> MessageData&;
+		auto operator<<(std::int16_t value) -> MessageData&;
+		auto operator<<(std::int32_t value) -> MessageData&;
+		auto operator<<(std::int64_t value) -> MessageData&;
+
 		auto operator<<(float value) -> MessageData&;
 		auto operator<<(double value) -> MessageData&;
+
 		auto operator<<(entt::entity value) -> MessageData&;
 		auto operator<<(const std::string& value) -> MessageData&;
 
 		auto operator>>(bool& value) -> MessageData&;
+
 		auto operator>>(std::uint8_t& value) -> MessageData&;
 		auto operator>>(std::uint16_t& value) -> MessageData&;
 		auto operator>>(std::uint32_t& value) -> MessageData&;
 		auto operator>>(std::uint64_t& value) -> MessageData&;
+
+		auto operator>>(std::int8_t& value) -> MessageData&;
+		auto operator>>(std::int16_t& value) -> MessageData&;
+		auto operator>>(std::int32_t& value) -> MessageData&;
+		auto operator>>(std::int64_t& value) -> MessageData&;
+
 		auto operator>>(float& value) -> MessageData&;
 		auto operator>>(double& value) -> MessageData&;
+
 		auto operator>>(entt::entity& value) -> MessageData&;
 		auto operator>>(std::string& value) -> MessageData&;
 

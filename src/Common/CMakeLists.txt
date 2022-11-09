@@ -3,7 +3,8 @@ add_library(MMORPG::Common ALIAS mmorpg-common)
 
 target_sources(
   mmorpg-common
-  PRIVATE Game/WorldEntityPosition.cpp
+  PRIVATE Game/WorldEntityGCD.cpp
+          Game/WorldEntityPosition.cpp
           Game/WorldEntityType.cpp
           Game/WorldEntityName.cpp
           Game/WorldEntityStats.cpp

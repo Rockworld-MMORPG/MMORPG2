@@ -12,7 +12,7 @@ namespace Common::Game
 	 */
 	struct COMMON_API WorldEntityName : Network::SerialisedComponent<WorldEntityName>
 	{
-		std::string name = "";
+		std::string name;
 
 		auto serialise(Network::MessageData& data) -> void;
 		auto deserialise(Network::MessageData& data) -> void;

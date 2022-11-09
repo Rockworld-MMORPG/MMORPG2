@@ -57,6 +57,35 @@ namespace Common::Network
 		return *this;
 	}
 
+
+	auto MessageData::operator<<(const std::int8_t value) -> MessageData&
+	{
+		auto tempValue = *reinterpret_cast<const std::uint8_t*>(&value);
+		m_data.emplace_back(tempValue);
+		return *this;
+	}
+
+	auto MessageData::operator<<(const std::int16_t value) -> MessageData&
+	{
+		auto tempValue = *reinterpret_cast<const std::uint16_t*>(&value);
+		PACK_MULTIPLE(std::uint16_t, tempValue);
+		return *this;
+	}
+
+	auto MessageData::operator<<(const std::int32_t value) -> MessageData&
+	{
+		auto tempValue = *reinterpret_cast<const std::uint32_t*>(&value);
+		PACK_MULTIPLE(std::uint32_t, tempValue);
+		return *this;
+	}
+
+	auto MessageData::operator<<(const std::int64_t value) -> MessageData&
+	{
+		auto tempValue = *reinterpret_cast<const std::uint64_t*>(&value);
+		PACK_MULTIPLE(std::uint64_t, tempValue);
+		return *this;
+	}
+
 	auto MessageData::operator<<(const float value) -> MessageData&
 	{
 		// Should be true by definition but doesn't hurt to check
@@ -125,6 +154,38 @@ namespace Common::Network
 	auto MessageData::operator>>(std::uint64_t& value) -> MessageData&
 	{
 		UNPACK_MULTIPLE(std::uint64_t, value)
+		return *this;
+	}
+
+	auto MessageData::operator>>(std::int8_t& value) -> MessageData&
+	{
+		auto tempValue = m_data.at(m_readHead);
+		value          = *reinterpret_cast<std::int8_t*>(&tempValue);
+		m_readHead += 1;
+		return *this;
+	}
+
+	auto MessageData::operator>>(std::int16_t& value) -> MessageData&
+	{
+		auto tempValue = std::uint16_t(0);
+		UNPACK_MULTIPLE(std::uint16_t, tempValue)
+		value = *reinterpret_cast<std::int16_t*>(&tempValue);
+		return *this;
+	}
+
+	auto MessageData::operator>>(std::int32_t& value) -> MessageData&
+	{
+		auto tempValue = std::uint32_t(0);
+		UNPACK_MULTIPLE(std::uint32_t, tempValue)
+		value = *reinterpret_cast<std::int32_t*>(&tempValue);
+		return *this;
+	}
+
+	auto MessageData::operator>>(std::int64_t& value) -> MessageData&
+	{
+		auto tempValue = std::uint64_t(0);
+		UNPACK_MULTIPLE(std::uint64_t, tempValue)
+		value = *reinterpret_cast<std::int64_t*>(&tempValue);
 		return *this;
 	}
 

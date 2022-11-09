@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Common/Game/WorldEntityCollider.hpp"
+#include "Common/Game/WorldEntityGCD.hpp"
 #include "Common/Game/WorldEntityName.hpp"
 #include "Common/Game/WorldEntityPosition.hpp"
 #include "Common/Game/WorldEntityStats.hpp"
@@ -18,6 +20,8 @@ namespace Common::Game
 		WorldEntityType type;
 		WorldEntityPosition position;
 		WorldEntityStats stats;
+		WorldEntityCollider collider;
+		WorldEntityGCD gcd;
 	};
 
 	COMMON_API auto createWorldEntity(entt::registry& registry, const WorldEntityData& data) -> entt::entity;

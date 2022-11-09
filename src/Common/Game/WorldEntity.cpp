@@ -1,5 +1,6 @@
 #include "Common/Game/WorldEntity.hpp"
-#include "Common/Game/WorldEntityType.hpp"
+#include "Common/Game/WorldEntityGCD.hpp"
+#include <SFML/System/Time.hpp>
 #include <entt/entity/registry.hpp>
 
 namespace Common::Game
@@ -17,6 +18,8 @@ namespace Common::Game
 		registry.emplace_or_replace<WorldEntityType>(entity, data.type);
 		registry.emplace_or_replace<WorldEntityName>(entity, data.name);
 		registry.emplace_or_replace<WorldEntityStats>(entity, data.stats);
+		registry.emplace_or_replace<WorldEntityCollider>(entity, data.collider);
+		registry.emplace_or_replace<WorldEntityGCD>(entity, data.gcd);
 
 		return entity;
 	}
@@ -27,11 +30,13 @@ namespace Common::Game
 		auto& worldEntityTypeComponent  = registry.get<WorldEntityType>(entity);
 		auto& worldEntityNameComponent  = registry.get<WorldEntityName>(entity);
 		auto& worldEntityStatsComponent = registry.get<WorldEntityStats>(entity);
+		auto& worldEntityGcdComponent   = registry.get<WorldEntityGCD>(entity);
 
 		worldPositionComponent.serialise(messageData);
 		worldEntityTypeComponent.serialise(messageData);
 		worldEntityNameComponent.serialise(messageData);
 		worldEntityStatsComponent.serialise(messageData);
+		worldEntityGcdComponent.serialise(messageData);
 	}
 
 	auto deserialiseWorldEntity(Network::MessageData& messageData) -> WorldEntityData
@@ -42,6 +47,7 @@ namespace Common::Game
 		wData.type.deserialise(messageData);
 		wData.name.deserialise(messageData);
 		wData.stats.deserialise(messageData);
+		wData.gcd.deserialise(messageData);
 
 		return wData;
 	}

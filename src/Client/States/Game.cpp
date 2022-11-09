@@ -226,6 +226,20 @@ namespace Client::States
 				}
 			}
 			break;
+			case Common::Network::MessageType::Server_Stats:
+			{
+				auto entity = entt::entity(entt::null);
+				message.data >> entity;
+
+				if (!m_registry.valid(entity))
+				{
+					break;
+				}
+
+				auto& stats = m_registry.get<Common::Game::WorldEntityStats>(entity);
+				stats.deserialise(message.data);
+			}
+			break;
 			default:
 				break;
 		}

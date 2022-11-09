@@ -30,8 +30,12 @@ namespace Common::Network
 		Server_Disconnect,
 		Server_CreateEntity,
 		Server_DestroyEntity,
-		Server_InputState,
 		Server_WorldState,
+
+		Server_InputState,
+		Server_Stats,
+		Server_Position,
+		Server_Name
 	};
 
 	COMMON_API auto operator<<(MessageData& messageData, MessageType messageType) -> MessageData&;
